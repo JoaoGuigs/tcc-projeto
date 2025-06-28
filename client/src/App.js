@@ -1,24 +1,30 @@
-import logo from './logo.svg';
-import './App.css';
+import React from "react";
+import LoginPage from "./pages/LoginPage"; // Importa sua página de login
+import { createTheme, ThemeProvider } from "@mui/material/styles";
+
+const theme = createTheme({
+  typography: {
+    fontFamily: [
+      "Poppins",
+      "Roboto",
+      '"Helvetica Neue"',
+      "Arial",
+      "sans-serif",
+    ].join(","),
+  },
+  shape:{
+    borderRadius: 16, // Define um raio de borda padrão para todos os componentes
+  }
+});
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <ThemeProvider theme={theme}>
+      <div className="App">
+        {/* Por enquanto, vamos exibir a página de login aqui */}
+        <LoginPage />
+      </div>
+    </ThemeProvider>
   );
 }
 

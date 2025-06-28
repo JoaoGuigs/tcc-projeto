@@ -1,0 +1,14 @@
+# Ignorar todas as pastas node_modules do projeto
+node_modules/
+
+# Arquivos de log do npm
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Arquivos de ambiente (MUITO IMPORTANTE para segurança)
+# Nunca envie senhas ou chaves de API para o repositório
+.env
+
+# Arquivos de sistema operacional
+.DS_Store

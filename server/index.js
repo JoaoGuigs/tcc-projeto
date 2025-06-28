@@ -1,33 +1,38 @@
-const express = require('express');
+const express = require("express");
 const app = express();
 const port = 3001; // Porta para o back-end, diferente da do React (3000)
-const db = require('./database.js'); 
+const db = require("./database.js");
+
+const cors = require("cors"); // Importa o pacote CORS para permitir requisições de outros domínios
+
+app.use(cors()); // Permite requisições de outros domínios, como o front-end React
+app.use(express.json()); // Middleware para interpretar JSON no corpo das requisições
 // Rota de teste
-app.get('/', (req, res) => {
-  res.send('API do PhysioClinic ERP está funcionando!');
+app.get("/", (req, res) => {
+  res.send("API do PhysioClinic ERP está funcionando!");
 });
 
 // Rota de teste para verificar a conexão com o banco
-app.get('/test-db', async (req, res) => {
+app.get("/test-db", async (req, res) => {
   try {
     // Faz uma consulta simples para buscar a data e hora atuais do banco
-    const [results, fields] = await db.query('SELECT NOW();');
-    
+    const [results, fields] = await db.query("SELECT NOW();");
+
     // Se a consulta funcionar, retorna o resultado
     res.json({
-      message: 'Conexão com o banco de dados bem-sucedida!',
-      result: results[0]
+      message: "Conexão com o banco de dados bem-sucedida!",
+      result: results[0],
     });
   } catch (error) {
     // Se der erro, informa no console e retorna uma mensagem de erro
-    console.error('Erro ao conectar ao banco de dados:', error);
-    res.status(500).json({ message: 'Erro ao conectar ao banco de dados.' });
+    console.error("Erro ao conectar ao banco de dados:", error);
+    res.status(500).json({ message: "Erro ao conectar ao banco de dados." });
   }
 });
 
-const usuariosRoutes = require('./routes/usuarios.js'); // Importa as rotas de usuários
+const usuariosRoutes = require("./routes/usuarios.js"); // Importa as rotas de usuários
 
-app.use('/usuarios', usuariosRoutes); // Usa as rotas de usuários
+app.use("/usuarios", usuariosRoutes); // Usa as rotas de usuários
 
 app.listen(port, () => {
   console.log(`Servidor rodando na porta ${port}`);
