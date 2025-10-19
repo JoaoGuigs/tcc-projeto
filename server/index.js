@@ -1,39 +1,30 @@
+// Local: server/index.js
+
 const express = require("express");
+const cors = require("cors");
 const app = express();
-const port = 3001; // Porta para o back-end, diferente da do React (3000)
-const db = require("./database.js");
+const port = 3001;
 
-const cors = require("cors"); // Importa o pacote CORS para permitir requisições de outros domínios
+// --- Middlewares Essenciais ---
+app.use(cors());
+app.use(express.json());
 
-app.use(cors()); // Permite requisições de outros domínios, como o front-end React
-app.use(express.json()); // Middleware para interpretar JSON no corpo das requisições
-// Rota de teste
+// --- Importação das Rotas ---
+
+const usuariosRoutes = require('./src/routes/usuario.js');
+const pacientesRoutes = require('./src/routes/paciente.js');
+const conveniosRoutes = require('./src/routes/convenio.js'); 
+
+// --- Uso das Rotas ---
+app.use('/usuarios', usuariosRoutes);
+app.use('/pacientes', pacientesRoutes);
+app.use('/convenios', conveniosRoutes);
+
 app.get("/", (req, res) => {
-  res.send("API do PhysioClinic ERP está funcionando!");
+  res.send("API do PhysioClinic está funcionando!");
 });
 
-// Rota de teste para verificar a conexão com o banco
-app.get("/test-db", async (req, res) => {
-  try {
-    // Faz uma consulta simples para buscar a data e hora atuais do banco
-    const [results, fields] = await db.query("SELECT NOW();");
-
-    // Se a consulta funcionar, retorna o resultado
-    res.json({
-      message: "Conexão com o banco de dados bem-sucedida!",
-      result: results[0],
-    });
-  } catch (error) {
-    // Se der erro, informa no console e retorna uma mensagem de erro
-    console.error("Erro ao conectar ao banco de dados:", error);
-    res.status(500).json({ message: "Erro ao conectar ao banco de dados." });
-  }
-});
-
-const usuariosRoutes = require("./routes/usuarios.js"); // Importa as rotas de usuários
-
-app.use("/usuarios", usuariosRoutes); // Usa as rotas de usuários
-
+// --- Inicialização do Servidor ---
 app.listen(port, () => {
   console.log(`Servidor rodando na porta ${port}`);
 });

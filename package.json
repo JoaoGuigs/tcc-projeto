@@ -10,5 +10,8 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "@mui/icons-material": "^7.3.2"
+  }
 }
