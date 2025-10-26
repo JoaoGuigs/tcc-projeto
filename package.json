@@ -12,6 +12,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@mui/icons-material": "^7.3.2"
+    "@mui/icons-material": "^7.3.2",
+    "@mui/x-date-pickers": "^8.15.0",
+    "dayjs": "^1.11.18"
   }
 }
