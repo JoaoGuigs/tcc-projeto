@@ -58,7 +58,7 @@ export function Sidebar() {
     >
       <Box className={styles.titleContainer}>
         <Typography variant="h5" component="h1" sx={{ color: "white" }}>
-          PhysioClinic {/* Ou Clinica da Cris */}
+          Clínica Cris {/* Ou Clinica da Cris */}
         </Typography>
       </Box>
 
@@ -72,14 +72,9 @@ export function Sidebar() {
         {/* Link para Agenda - Leva para a página de AGENDAR */}
         {renderListItem("Agenda", <CalendarTodayIcon />, "/agendar")}
 
-        {/* Links que ainda não têm página (não são clicáveis) */}
+        {/* Links ativos */}
         {renderListItem("Relatórios", <AssessmentIcon />, "/relatorios")}
-        <ListItemButton disabled className={styles.listItem}>
-          <ListItemIcon className={styles.icon}>
-            <SettingsIcon />
-          </ListItemIcon>
-          <ListItemText primary="Configurações" />
-        </ListItemButton>
+        {renderListItem("Configurações", <SettingsIcon />, "/configuracoes")}
       </List>
     </Drawer>
   );

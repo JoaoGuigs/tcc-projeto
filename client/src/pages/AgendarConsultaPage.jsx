@@ -9,10 +9,11 @@ import {
   List,
   ListItem,
   ListItemText,
-  Paper,
   Button,
   Grid,
   InputAdornment,
+  Snackbar,
+  Alert,
 } from "@mui/material";
 import { Search } from "@mui/icons-material";
 import axios from "axios";
@@ -27,17 +28,6 @@ dayjs.locale("pt-br");
 
 const API_URL = "http://localhost:3001";
 
-// --- Dados de Exemplo (MOCK) para os Horários ---
-// No futuro, isso virá da API baseado na data selecionada
-const mockAvailableTimes = [
-  "08:00",
-  "08:30",
-  "09:00",
-  "09:30",
-  "10:00",
-  "10:30",
-];
-
 function AgendarConsultaPage() {
   const { setPageTitle } = useOutletContext();
 
@@ -46,8 +36,21 @@ function AgendarConsultaPage() {
   const [searchResults, setSearchResults] = useState([]);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [selectedDate, setSelectedDate] = useState(dayjs()); // Usa dayjs para a data
-  const [availableTimes, setAvailableTimes] = useState(mockAvailableTimes); // Começa com mock
+  const [availableTimes, setAvailableTimes] = useState([]); // Inicia vazio
   const [selectedTime, setSelectedTime] = useState(null);
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
+
+  const showSnackbar = (message, severity = "success") => {
+    setSnackbar({ open: true, message, severity });
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar({ ...snackbar, open: false });
+  };
 
   // Efeito para o título
   useEffect(() => {
@@ -57,7 +60,7 @@ function AgendarConsultaPage() {
   // Efeito para buscar pacientes (igual ao anterior)
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
-      if (searchTerm.length > 2) {
+  if (searchTerm && searchTerm.trim().length >= 4) {
         try {
           const response = await axios.get(
             `${API_URL}/pacientes?nome=${searchTerm}`
@@ -74,14 +77,31 @@ function AgendarConsultaPage() {
     return () => clearTimeout(delayDebounceFn);
   }, [searchTerm]);
 
-  // Efeito para buscar horários disponíveis (por enquanto, só re-seta o mock)
+  // Efeito para buscar horários disponíveis
   useEffect(() => {
-    // --- LÓGICA FUTURA AQUI ---
-    // Aqui você chamaria a API para buscar os horários
-    // da 'selectedDate'. Ex: fetchTimes(selectedDate);
-    // Por enquanto, apenas resetamos para o mock e limpamos a seleção
-    setAvailableTimes(mockAvailableTimes);
-    setSelectedTime(null);
+    const fetchAvailableTimes = async () => {
+      try {
+        // Por enquanto, vamos usar um profissional_id fixo (1)
+        // TODO: Implementar seleção de profissional
+        const response = await axios.get(
+          `${API_URL}/agendamentos/horarios-disponiveis`, {
+            params: {
+              data: selectedDate.format('YYYY-MM-DD'),
+              profissional_id: 1
+            }
+          }
+        );
+        setAvailableTimes(response.data);
+      } catch (error) {
+        console.error("Erro ao buscar horários disponíveis:", error);
+        setAvailableTimes([]);
+      }
+      setSelectedTime(null);
+    };
+
+    if (selectedDate) {
+      fetchAvailableTimes();
+    }
   }, [selectedDate]); // Roda sempre que a data mudar
 
   // Handlers
@@ -101,7 +121,7 @@ function AgendarConsultaPage() {
 
   const handleConfirm = async () => {
     if (!selectedPatient || !selectedDate || !selectedTime) {
-      alert("Por favor, selecione paciente, data e horário.");
+      showSnackbar("Por favor, selecione paciente, data e horário.", "warning");
       return;
     }
 
@@ -126,7 +146,7 @@ function AgendarConsultaPage() {
     try {
       // Chamada POST para a rota que ainda vamos criar no backend
       await axios.post(`${API_URL}/agendamentos`, agendamentoData);
-      alert("Agendamento confirmado com sucesso!");
+      showSnackbar("Agendamento confirmado com sucesso!", "success");
       // Limpar os campos ou navegar para outra página
       setSelectedPatient(null);
       setSearchTerm("");
@@ -134,148 +154,330 @@ function AgendarConsultaPage() {
       setSelectedTime(null);
     } catch (error) {
       console.error("Erro ao confirmar agendamento:", error);
-      alert("Erro ao confirmar agendamento.");
+      showSnackbar(error.response?.data?.message || "Erro ao confirmar agendamento.", "error");
     }
   };
 
   return (
-    // Envolvemos tudo com o LocalizationProvider para o calendário funcionar
     <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="pt-br">
-      <Box className="agendar-consulta-container">
-        {/* --- Seção de Busca --- */}
-        <Paper sx={{ p: 2, mb: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            Buscar Paciente
-          </Typography>
-          <TextField
-            fullWidth
-            placeholder="Digite o nome do paciente..."
-            variant="outlined"
-            size="small"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search />
-                </InputAdornment>
-              ),
-            }}
-          />
-          {searchResults.length > 0 && (
-            <List
-              sx={{
-                bgcolor: "background.paper",
-                mt: 1,
-                border: "1px solid #ddd",
-                borderRadius: 1,
-                maxHeight: 150,
-                overflow: "auto",
-              }}
+      <Box sx={{ padding: "32px 48px", width: "100%" }}>
+        <Box
+          sx={{
+            backgroundColor: "white",
+            borderRadius: "12px",
+            padding: "32px",
+            boxShadow: "0 1px 3px rgba(0, 0, 0, 0.08)",
+            border: "1px solid #f0f0f0",
+          }}
+        >
+          {/* Seção de Busca */}
+          <Box sx={{ mb: 4 }}>
+            <Typography
+              variant="subtitle1"
+              sx={{ mb: 1.5, fontWeight: 500, color: "#666" }}
             >
-              {searchResults.map((paciente) => (
-                <ListItem
-                  button
-                  key={paciente.id}
-                  onClick={() => handleSelectPatient(paciente)}
-                >
-                  <ListItemText primary={paciente.nome_completo} />
-                </ListItem>
-              ))}
-            </List>
-          )}
-        </Paper>
-
-        {/* --- Seção Calendário e Horários (Layout com Grid) --- */}
-        <Grid container spacing={3} sx={{ mb: 3 }}>
-          {/* Coluna do Calendário */}
-          <Grid item xs={12} md={7}>
-            {/* Usamos o StaticDatePicker para o calendário embutido */}
-            <StaticDatePicker
-              displayStaticWrapperAs="desktop" // ou "mobile"
-              value={selectedDate}
-              onChange={handleDateChange}
-              renderInput={(params) => <TextField {...params} />} // Necessário, mas não visível no modo estático
-              // Desabilitar dias passados (opcional)
-              minDate={dayjs()}
+              Buscar Paciente
+            </Typography>
+            <TextField
+              fullWidth
+              placeholder="Digite o nome do paciente..."
+              variant="outlined"
+              size="medium"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <Search sx={{ color: "#9e9e9e" }} />
+                  </InputAdornment>
+                ),
+              }}
+              sx={{
+                "& .MuiOutlinedInput-root": {
+                  backgroundColor: "#fff",
+                  borderRadius: "8px",
+                },
+              }}
             />
-          </Grid>
+            {searchResults.length > 0 && (
+              <List
+                sx={{
+                  bgcolor: "white",
+                  mt: 1,
+                  border: "1px solid #e0e0e0",
+                  borderRadius: "8px",
+                  maxHeight: 200,
+                  overflow: "auto",
+                  boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
+                }}
+              >
+                {searchResults.map((paciente) => (
+                  <ListItem
+                    button
+                    key={paciente.id}
+                    onClick={() => handleSelectPatient(paciente)}
+                    sx={{
+                      "&:hover": { backgroundColor: "#f5f5f5" },
+                      borderBottom: "1px solid #f0f0f0",
+                      "&:last-child": { borderBottom: "none" },
+                    }}
+                  >
+                    <ListItemText primary={paciente.nome_completo} />
+                  </ListItem>
+                ))}
+              </List>
+            )}
+          </Box>
 
-          {/* Coluna dos Horários */}
-          <Grid item xs={12} md={5}>
-            <Paper sx={{ p: 2, height: "100%" }}>
-              <Typography variant="h6" gutterBottom>
-                Horários Disponíveis
-              </Typography>
-              <Grid container spacing={1}>
-                {availableTimes.map((time) => (
-                  <Grid item xs={6} key={time}>
+          {/* Grid: Calendário e Horários */}
+          <Box sx={{ display: "flex", gap: 4, mb: 4, flexWrap: "wrap" }}>
+            {/* Calendário */}
+            <Box sx={{ flex: "1.2 1 450px", minWidth: "400px" }}>
+              <Box
+                sx={{
+                  "& .MuiPickersLayout-root": {
+                    minWidth: "100%",
+                  },
+                  "& .MuiPickersLayout-contentWrapper": {
+                    width: "100%",
+                  },
+                  "& .MuiDateCalendar-root": {
+                    width: "100%",
+                    maxHeight: "none",
+                  },
+                  "& .MuiPickersCalendarHeader-root": {
+                    paddingLeft: "16px",
+                    paddingRight: "16px",
+                    marginTop: "8px",
+                  },
+                  "& .MuiDayCalendar-header": {
+                    justifyContent: "space-between",
+                    paddingLeft: "12px",
+                    paddingRight: "12px",
+                  },
+                  "& .MuiDayCalendar-weekContainer": {
+                    justifyContent: "space-between",
+                    margin: "4px 0",
+                  },
+                  "& .MuiPickersDay-root": {
+                    fontSize: "14px",
+                    width: "40px",
+                    height: "40px",
+                    margin: "2px",
+                  },
+                  "& .MuiPickersDay-root.Mui-selected": {
+                    backgroundColor: "#2c3e50 !important",
+                    color: "#fff",
+                    fontWeight: 600,
+                  },
+                  "& .MuiPickersCalendarHeader-label": {
+                    fontSize: "15px",
+                    fontWeight: 500,
+                  },
+                  "& .MuiPickersArrowSwitcher-root": {
+                    gap: "8px",
+                  },
+                  "& .MuiDayCalendar-weekDayLabel": {
+                    fontSize: "13px",
+                    fontWeight: 500,
+                    width: "40px",
+                    height: "40px",
+                  },
+                  // Esconde os botões OK e Cancel
+                  "& .MuiDialogActions-root": {
+                    display: "none",
+                  },
+                  "& .MuiPickersLayout-actionBar": {
+                    display: "none",
+                  },
+                }}
+              >
+                <StaticDatePicker
+                  displayStaticWrapperAs="desktop"
+                  value={selectedDate}
+                  onChange={handleDateChange}
+                  minDate={dayjs()}
+                  slotProps={{
+                    actionBar: {
+                      actions: [],
+                    },
+                  }}
+                />
+              </Box>
+            </Box>
+
+            {/* Horários Disponíveis */}
+            <Box sx={{ flex: "1 1 300px", minWidth: "280px" }}>
+              <Box sx={{ pl: 2 }}>
+                <Typography
+                  variant="subtitle1"
+                  sx={{ mb: 2.5, fontWeight: 600, color: "#333", fontSize: "15px" }}
+                >
+                  Horários Disponíveis
+                </Typography>
+                <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1.5 }}>
+                  {availableTimes.map((time) => (
                     <Button
+                      key={time}
                       fullWidth
-                      variant={selectedTime === time ? "contained" : "outlined"} // Destaca o botão selecionado
+                      variant={
+                        selectedTime === time ? "contained" : "outlined"
+                      }
                       onClick={() => handleTimeSelect(time)}
+                      sx={{
+                        borderRadius: "6px",
+                        textTransform: "none",
+                        fontSize: "13px",
+                        padding: "8px 12px",
+                        minHeight: "38px",
+                        ...(selectedTime === time
+                          ? {
+                              backgroundColor: "#2c3e50",
+                              color: "#fff",
+                              "&:hover": {
+                                backgroundColor: "#1a252f",
+                              },
+                            }
+                          : {
+                              borderColor: "#e0e0e0",
+                              color: "#333",
+                              "&:hover": {
+                                borderColor: "#bdbdbd",
+                                backgroundColor: "#f5f5f5",
+                              },
+                            }),
+                      }}
                     >
                       {time}
                     </Button>
-                  </Grid>
-                ))}
+                  ))}
+                </Box>
                 {availableTimes.length === 0 && (
-                  <Grid item xs={12}>
-                    <Typography color="textSecondary" align="center">
-                      Nenhum horário disponível.
-                    </Typography>
-                  </Grid>
+                  <Typography
+                    color="textSecondary"
+                    align="center"
+                    sx={{ py: 3, fontSize: "14px" }}
+                  >
+                    Nenhum horário disponível para esta data.
+                  </Typography>
                 )}
-              </Grid>
-            </Paper>
-          </Grid>
-        </Grid>
+              </Box>
+            </Box>
+          </Box>
 
-        {/* --- Seção de Resumo --- */}
-        <Paper sx={{ p: 2, mb: 3 }}>
-          <Typography variant="h6" gutterBottom>
-            Resumo do Agendamento
-          </Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={4}>
-              <Typography variant="body2" color="textSecondary">
-                Paciente
-              </Typography>
-              <Typography>
-                {selectedPatient ? selectedPatient.nome_completo : "-"}
-              </Typography>
-            </Grid>
-            <Grid item xs={6} sm={4}>
-              <Typography variant="body2" color="textSecondary">
-                Data
-              </Typography>
-              {/* Formata a data selecionada */}
-              <Typography>
-                {selectedDate ? selectedDate.format("DD/MM/YYYY") : "-"}
-              </Typography>
-            </Grid>
-            <Grid item xs={6} sm={4}>
-              <Typography variant="body2" color="textSecondary">
-                Horário
-              </Typography>
-              <Typography>{selectedTime || "-"}</Typography>
-            </Grid>
-          </Grid>
-          {/* Aqui entraria a lista de próximas consultas do paciente */}
-        </Paper>
-
-        {/* --- Botões de Ação --- */}
-        <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
-          <Button variant="outlined">Cancelar</Button>
-          <Button
-            variant="contained"
-            onClick={handleConfirm}
-            disabled={!selectedPatient || !selectedTime} // Só habilita se tudo estiver selecionado
+          {/* Resumo do Agendamento */}
+          <Box
+            sx={{
+              backgroundColor: "#f8f9fa",
+              padding: "20px",
+              borderRadius: "8px",
+              mb: 3,
+            }}
           >
-            Confirmar Agendamento
-          </Button>
+            <Typography
+              variant="subtitle1"
+              sx={{ mb: 2, fontWeight: 600, color: "#333" }}
+            >
+              Resumo do Agendamento
+            </Typography>
+            <Grid container spacing={3}>
+              <Grid item xs={12} sm={4}>
+                <Typography
+                  variant="body2"
+                  sx={{ color: "#666", mb: 0.5, fontSize: "13px" }}
+                >
+                  Paciente
+                </Typography>
+                <Typography sx={{ fontWeight: 500, fontSize: "15px" }}>
+                  {selectedPatient ? selectedPatient.nome_completo : "-"}
+                </Typography>
+              </Grid>
+              <Grid item xs={6} sm={4}>
+                <Typography
+                  variant="body2"
+                  sx={{ color: "#666", mb: 0.5, fontSize: "13px" }}
+                >
+                  Data
+                </Typography>
+                <Typography sx={{ fontWeight: 500, fontSize: "15px" }}>
+                  {selectedDate ? selectedDate.format("DD/MM/YYYY") : "-"}
+                </Typography>
+              </Grid>
+              <Grid item xs={6} sm={4}>
+                <Typography
+                  variant="body2"
+                  sx={{ color: "#666", mb: 0.5, fontSize: "13px" }}
+                >
+                  Horário
+                </Typography>
+                <Typography sx={{ fontWeight: 500, fontSize: "15px" }}>
+                  {selectedTime || "-"}
+                </Typography>
+              </Grid>
+            </Grid>
+          </Box>
+
+          {/* Botões de Ação */}
+          <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
+            <Button
+              variant="outlined"
+              onClick={() => {
+                setSelectedPatient(null);
+                setSearchTerm("");
+                setSelectedDate(dayjs());
+                setSelectedTime(null);
+              }}
+              sx={{
+                borderRadius: "8px",
+                textTransform: "none",
+                color: "#666",
+                borderColor: "#ddd",
+                "&:hover": {
+                  borderColor: "#999",
+                  backgroundColor: "#f5f5f5",
+                },
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleConfirm}
+              disabled={!selectedPatient || !selectedTime}
+              sx={{
+                borderRadius: "8px",
+                textTransform: "none",
+                backgroundColor: "#2c3e50",
+                color: "#fff",
+                "&:hover": {
+                  backgroundColor: "#1a252f",
+                },
+                "&:disabled": {
+                  backgroundColor: "#e0e0e0",
+                  color: "#9e9e9e",
+                },
+              }}
+            >
+              Confirmar Agendamento
+            </Button>
+          </Box>
         </Box>
       </Box>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+      >
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </LocalizationProvider>
   );
 }

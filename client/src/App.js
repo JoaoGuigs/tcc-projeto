@@ -9,6 +9,7 @@ import PacienteCadastroPage from "./pages/PacienteCadastroPage";
 import AgendarConsultaPage from "./pages/AgendarConsultaPage";
 import RelatorioPacientePage from "./pages/RelatorioPacientePage";
 import RegistrarAtendimentoPage from "./pages/RegistrarAtendimentoPage";
+import ConfiguracoesPage from "./pages/ConfiguracoesPage";
 const theme = createTheme({
   typography: {
     fontFamily: [
@@ -39,6 +40,7 @@ function App() {
           <Route path="/agendar" element={<AgendarConsultaPage />} />
           <Route path="/relatorios" element={<RelatorioPacientePage />} />
           <Route path="/atendimentos/novo" element={<RegistrarAtendimentoPage />}/>
+          <Route path="/configuracoes" element={<ConfiguracoesPage />} />
           {/* ...outras rotas privadas */}
         </Route>
       </Routes>

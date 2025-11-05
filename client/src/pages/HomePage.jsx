@@ -8,15 +8,7 @@ import {
   Card,
   CardContent,
   Paper,
-  Box,
-  Typography,
-  List,
-  ListItem,
-  ListItemText,
-  ListItemAvatar,
-  Avatar,
 } from "@mui/material";
-// NOTE: Removemos o 'Grid' dos imports do MUI
 import {
   Search,
   PersonAdd,
@@ -25,156 +17,163 @@ import {
 } from "@mui/icons-material";
 import axios from "axios";
 import { Link as RouterLink } from "react-router-dom";
-import "./css/HomePage.css"; // Continuamos usando seu CSS!
+import "./css/HomePage.css";
 
 const API_URL = "http://localhost:3001";
 
 function HomePage() {
+  // 1. Pega a função 'setPageTitle' do MainLayout para definir o título
   const { setPageTitle } = useOutletContext();
-  const [agendaDoDia, setAgendaDoDia] = useState([]);
 
-  // (A lógica do useEffect e do fetchAgendamentos continua 100% igual...)
+  // 2. Cria um "estado" para guardar a lista de agendamentos que vem da API
+  const [agendaDoDia, setAgendaDoDia] = useState([]);
+  const [agendaDoDiaOriginal, setAgendaDoDiaOriginal] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+
+  // 3. Primeiro useEffect: Define o título da página no Header
   useEffect(() => {
-    setPageTitle("Início"); // Mudei de "" para "Início" para o Header funcionar
+    setPageTitle("Início");
   }, [setPageTitle]);
 
+  // 4. Segundo useEffect: Busca os dados da API quando a página carrega
   useEffect(() => {
     const fetchAgendamentos = async () => {
       try {
+        // Chama a rota do backend que criamos
         const response = await axios.get(`${API_URL}/agendamentos`);
-        setAgendaDoDia(response.data);
+        setAgendaDoDia(response.data); // Guarda os dados no estado
+        setAgendaDoDiaOriginal(response.data); // Guarda a lista original
       } catch (error) {
         console.error("Erro ao buscar agendamentos:", error);
       }
     };
+
     fetchAgendamentos();
-  }, []);
+  }, []); // O array vazio [] faz isso rodar apenas uma vez
 
-  // 5. O JSX (visual) refatorado com Bootstrap
+  // 5. Função para filtrar agendamentos
+  const handleSearch = (e) => {
+    const term = e.target.value;
+    setSearchTerm(term);
+
+    if (term.trim() === "") {
+      // Se o campo estiver vazio, mostra todos
+      setAgendaDoDia(agendaDoDiaOriginal);
+    } else {
+      // Filtra por nome do paciente (case insensitive)
+      const filtered = agendaDoDiaOriginal.filter((agendamento) =>
+        agendamento.paciente_nome
+          ?.toLowerCase()
+          .includes(term.toLowerCase())
+      );
+      setAgendaDoDia(filtered);
+    }
+  };
+
+  // 5. O JSX (visual) da sua página
   return (
-    <Box className="homepage-container">
-      {/* Barra de busca (MUI) */}
-      <TextField
-        className="search-bar mb-4"
-        placeholder="Buscar paciente..."
-        variant="outlined"
-        size="small"
-        InputProps={{
-          startAdornment: (
-            <InputAdornment position="start">
-              <Search className="search-icon" />
-            </InputAdornment>
-          ),
-        }}
-      />
-
-      {/* Seção de Cards de Ação com Bootstrap */}
-      {/* MUDANÇA AQUI: Trocamos <Grid container> por <div className="row">
-        'g-3' é o espaçamento e 'mb-4' é a margem inferior do Bootstrap 
-      */}
-      <div className="row g-3 mb-4">
-        <div className="col-12 col-md-4">
-          <RouterLink to="/pacientes/novo" className="action-link-wrapper">
-            <Card className="action-card d-flex">
-              <CardContent className=" action-card-content d-flex flex-row align-items-center gap-2">
-                <PersonAdd className="action-card-icon mb-0" />
-                <Typography
-                  variant="h6"
-                  component="h2"
-                  className="action-card-title"
-                >
-                  Novo Paciente
-                </Typography>
-              </CardContent>
-            </Card>
-          </RouterLink>{" "}
-          {/* 3. Fechamos o Link aqui */}
-        </div>
-
-        <div className="col-12 col-md-4">
-          <RouterLink to="/agendar" className="action-link-wrapper">
-            <Card className="action-card  d-flex">
-              {" "}
-              <CardContent className="action-card-content d-flex flex-row align-items-center gap-2">
-                <CalendarToday className="action-card-icon mb-0" />{" "}
-                <Typography
-                  variant="h6"
-                  component="h2"
-                  className="action-card-title"
-                >
-                  Agendar Consulta
-                </Typography>
-              </CardContent>
-            </Card>
-          </RouterLink>
-        </div>
-
-        <div className="col-12 col-md-4">
-          {/* 1. Envolve com RouterLink */}
-          <RouterLink to="/atendimentos/novo" className="action-link-wrapper">
-            <Card className="action-card d-flex">
-              <CardContent className="action-card-content d-flex flex-row align-items-center gap-2">
-                <Description className="action-card-icon mb-0" />
-                <Typography
-                  variant="h6"
-                  component="h2"
-                  className="action-card-title"
-                >
-                  Novo Prontuário
-                </Typography>
-              </CardContent>
-            </Card>
-          </RouterLink>
-        </div>
+    <div className="homepage-container">
+      {/* Barra de busca */}
+      <div className="search-container">
+        <TextField
+          className="search-bar"
+          placeholder="Buscar paciente..."
+          variant="outlined"
+          size="medium"
+          fullWidth
+          value={searchTerm}
+          onChange={handleSearch}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <Search className="search-icon" />
+              </InputAdornment>
+            ),
+          }}
+        />
       </div>
 
-      {/* Seção da Agenda do Dia (MUI) 
-        (Mantivemos o <Paper> e <List> do MUI porque eles funcionam bem) 
-      */}
+      {/* Seção de Cards de Ação */}
+      <div className="action-cards-container">
+        <Card
+          component={RouterLink}
+          to="/pacientes/novo"
+          className="action-card"
+        >
+          <CardContent className="action-card-content">
+            <PersonAdd className="action-card-icon" />
+            <span className="action-card-title">Novo Paciente</span>
+          </CardContent>
+        </Card>
+
+        <Card
+          component={RouterLink}
+          to="/agenda/nova"
+          className="action-card"
+        >
+          <CardContent className="action-card-content">
+            <CalendarToday className="action-card-icon" />
+            <span className="action-card-title">Agendar Consulta</span>
+          </CardContent>
+        </Card>
+
+        <Card
+          component={RouterLink}
+          to="/atendimentos/novo"
+          className="action-card"
+        >
+          <CardContent className="action-card-content">
+            <Description className="action-card-icon" />
+            <span className="action-card-title">Novo Prontuário</span>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Seção da Agenda do Dia */}
       <Paper className="agenda-section">
-        <Typography variant="h5" component="h2" className="agenda-title">
-          Agenda do Dia
-        </Typography>
+        <h5 className="agenda-title">Agenda do Dia</h5>
 
-        <List>
-          {agendaDoDia.length === 0 ? (
-            <ListItem className="agenda-empty">
-              <ListItemText primary="Nenhum agendamento encontrado." />
-            </ListItem>
-          ) : (
-            agendaDoDia.map((item) => (
-              <ListItem key={item.id} className="appointment-item" divider>
-                <ListItemAvatar>
-                  <Avatar
-                    className={
-                      item.paciente_nome?.includes("Maria") ||
-                      item.paciente_nome?.includes("Ana")
-                        ? "female-avatar"
-                        : "male-avatar"
-                    }
-                  >
-                    {item.paciente_nome?.charAt(0)}
-                  </Avatar>
-                </ListItemAvatar>
-
-                <ListItemText
-                  primary={item.paciente_nome}
-                  secondary={item.tipo_consulta || "Consulta"}
-                  className="appointment-info"
-                />
-
-                <Typography variant="body2" className="appointment-time">
+        {/* Lista de agendamentos */}
+        {agendaDoDia.length === 0 ? (
+          <div className="agenda-empty">
+            <p>
+              {searchTerm
+                ? `Nenhum paciente encontrado com "${searchTerm}"`
+                : "Nenhum agendamento para hoje."}
+            </p>
+          </div>
+        ) : (
+          <div className="appointments-list">
+            {agendaDoDia.map((item) => (
+              <div key={item.id} className="appointment-item">
+                {/* Horário */}
+                <div className="appointment-time">
                   {new Date(item.data_hora).toLocaleTimeString("pt-BR", {
                     hour: "2-digit",
                     minute: "2-digit",
                   })}
-                </Typography>
-              </ListItem>
-            ))
-          )}
-        </List>
+                </div>
+
+                {/* Avatar do paciente */}
+                <div className="appointment-avatar">
+                  {item.paciente_nome?.charAt(0).toUpperCase() || "?"}
+                </div>
+
+                {/* Informações do paciente */}
+                <div className="appointment-info">
+                  <div className="appointment-patient-name">
+                    {item.paciente_nome}
+                  </div>
+                  <div className="appointment-type">
+                    {item.tipo_consulta || "Consulta Padrão"}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </Paper>
-    </Box>
+    </div>
   );
 }
 

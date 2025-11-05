@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { 
     Box, Typography, TextField, List, ListItem, ListItemButton, ListItemText, Paper, 
-    Grid, InputAdornment, Button, Alert, CircularProgress 
+    Grid, InputAdornment, Button, Alert, CircularProgress, Snackbar 
 } from '@mui/material';
 import { Search } from '@mui/icons-material';
 import axios from 'axios';
@@ -27,7 +27,19 @@ function RegistrarAtendimentoPage() {
     const [loadingAppointments, setLoadingAppointments] = useState(false);
     const [loadingSubmit, setLoadingSubmit] = useState(false);
     const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
+    const [snackbar, setSnackbar] = useState({
+        open: false,
+        message: "",
+        severity: "success",
+    });
+
+    const showSnackbar = (message, severity = "success") => {
+        setSnackbar({ open: true, message, severity });
+    };
+
+    const handleCloseSnackbar = () => {
+        setSnackbar({ ...snackbar, open: false });
+    };
 
     // Efeito para o título
     useEffect(() => {
@@ -37,7 +49,7 @@ function RegistrarAtendimentoPage() {
     // Efeito para buscar pacientes
     useEffect(() => {
         const delayDebounceFn = setTimeout(async () => {
-            if (searchTerm.length > 2) {
+            if (searchTerm && searchTerm.trim().length >= 4) {
                 setLoadingSearch(true);
                 setError('');
                 setSelectedPatient(null); // Limpa seleção ao buscar de novo
@@ -64,14 +76,11 @@ function RegistrarAtendimentoPage() {
         setSelectedAppointmentId(null); // Limpa seleção de agendamento
 
         try {
-            // Busca os agendamentos do paciente selecionado
-            // **IMPORTANTE**: Precisamos de uma nova rota no backend para isso!
-            // Ex: GET /agendamentos?pacienteId=ID&status=Agendado (ou similar)
-            // Por enquanto, vamos usar a rota geral e filtrar no front (NÃO IDEAL, mas funciona para começar)
-            const response = await axios.get(`${API_URL}/agendamentos`);
-            // Filtra os agendamentos apenas para este paciente (ajustar isso no backend depois!)
-            const appointmentsForPatient = response.data.filter(ag => ag.paciente_id === paciente.id);
-            setPatientAppointments(appointmentsForPatient);
+            // Busca os agendamentos do paciente que ainda não têm prontuário
+            const response = await axios.get(`${API_URL}/agendamentos`, {
+                params: { pacienteId: paciente.id, semAtendimento: true }
+            });
+            setPatientAppointments(response.data);
 
         } catch (err) {
             console.error('Erro ao buscar agendamentos do paciente:', err);
@@ -86,7 +95,6 @@ function RegistrarAtendimentoPage() {
         setSelectedAppointmentId(agendamentoId);
         // Limpa mensagens anteriores
         setError('');
-        setSuccess('');
     };
 
     // Função para salvar o atendimento
@@ -103,7 +111,6 @@ function RegistrarAtendimentoPage() {
 
         setLoadingSubmit(true);
         setError('');
-        setSuccess('');
 
         const atendimentoData = {
             agendamento_id: selectedAppointmentId,
@@ -114,16 +121,24 @@ function RegistrarAtendimentoPage() {
         try {
             // Chama a rota POST /atendimentos que já existe no backend
             await axios.post(`${API_URL}/atendimentos`, atendimentoData);
-            setSuccess('Atendimento registrado com sucesso!');
+            showSnackbar('Atendimento registrado com sucesso!', 'success');
             
             // Limpa os campos após salvar
             setEvolucaoClinica('');
             setProcedimentosRealizados('');
-            setSelectedAppointmentId(null); // Permite registrar outro agendamento do mesmo paciente
-            // Poderia buscar os agendamentos novamente para remover o que foi registrado
+            setSelectedAppointmentId(null);
+            setError('');
+            
+            // Atualiza a lista de agendamentos para remover o que foi registrado
+            if (selectedPatient) {
+                const response = await axios.get(`${API_URL}/agendamentos`, {
+                    params: { pacienteId: selectedPatient.id, semAtendimento: true }
+                });
+                setPatientAppointments(response.data);
+            }
 
         } catch (err) {
-            setError(err.response?.data?.error || 'Erro ao registrar atendimento.');
+            showSnackbar(err.response?.data?.error || 'Erro ao registrar atendimento.', 'error');
         } finally {
             setLoadingSubmit(false);
         }
@@ -202,7 +217,6 @@ function RegistrarAtendimentoPage() {
                         margin="normal"
                     />
                     {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
-                    {success && <Alert severity="success" sx={{ mt: 2 }}>{success}</Alert>}
                     <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
                         <Button type="submit" variant="contained" disabled={loadingSubmit}>
                             {loadingSubmit ? <CircularProgress size={24} color="inherit" /> : 'Salvar Atendimento'}
@@ -210,6 +224,21 @@ function RegistrarAtendimentoPage() {
                     </Box>
                  </Paper>
             )}
+
+            <Snackbar
+                open={snackbar.open}
+                autoHideDuration={4000}
+                onClose={handleCloseSnackbar}
+                anchorOrigin={{ vertical: "top", horizontal: "right" }}
+            >
+                <Alert
+                    onClose={handleCloseSnackbar}
+                    severity={snackbar.severity}
+                    sx={{ width: "100%" }}
+                >
+                    {snackbar.message}
+                </Alert>
+            </Snackbar>
         </Box>
     );
 }

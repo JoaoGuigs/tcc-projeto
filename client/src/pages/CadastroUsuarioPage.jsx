@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import axios from 'axios';
-import { Box, Typography, TextField, Button, Container, Alert } from '@mui/material';
+import { Box, Typography, TextField, Button, Container, Alert, Snackbar } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 
 // O endereço base da sua API
@@ -19,8 +19,20 @@ function CadastroUsuarioPage() {
     });
 
     const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
     const navigate = useNavigate();
+    const [snackbar, setSnackbar] = useState({
+        open: false,
+        message: "",
+        severity: "success",
+    });
+
+    const showSnackbar = (message, severity = "success") => {
+        setSnackbar({ open: true, message, severity });
+    };
+
+    const handleCloseSnackbar = () => {
+        setSnackbar({ ...snackbar, open: false });
+    };
 
     // Função para lidar com a mudança em qualquer campo
     const handleChange = (event) => {
@@ -35,7 +47,6 @@ function CadastroUsuarioPage() {
     const handleSubmit = async (event) => {
         event.preventDefault();
         setError('');
-        setSuccess('');
 
         // Validação simples
         if (!formData.nome || !formData.email || !formData.senha || !formData.registro_profissional || !formData.especialidade) {
@@ -47,9 +58,10 @@ function CadastroUsuarioPage() {
             // Chama a rota que cria um USUÁRIO + PROFISSIONAL
             await axios.post(`${API_URL}/usuarios/profissionais`, formData);
             
-            setSuccess('Profissional cadastrado com sucesso! Redirecionando para o login...');
+            showSnackbar('Profissional cadastrado com sucesso! Redirecionando para o login...', 'success');
             
             setFormData({ nome: '', email: '', senha: '', registro_profissional: '', especialidade: '' });
+            setError('');
 
             // Redireciona para a página de login após 2 segundos
             setTimeout(() => {
@@ -58,7 +70,7 @@ function CadastroUsuarioPage() {
 
         } catch (err) {
             const errorMessage = err.response?.data?.error || 'Ocorreu um erro ao cadastrar.';
-            setError(errorMessage);
+            showSnackbar(errorMessage, 'error');
         }
     };
 
@@ -127,7 +139,6 @@ function CadastroUsuarioPage() {
                     />
 
                     {error && <Alert severity="error" sx={{ mt: 2, width: '100%' }}>{error}</Alert>}
-                    {success && <Alert severity="success" sx={{ mt: 2, width: '100%' }}>{success}</Alert>}
 
                     <Button
                         type="submit"
@@ -139,6 +150,21 @@ function CadastroUsuarioPage() {
                     </Button>
                 </Box>
             </Box>
+
+            <Snackbar
+                open={snackbar.open}
+                autoHideDuration={4000}
+                onClose={handleCloseSnackbar}
+                anchorOrigin={{ vertical: "top", horizontal: "right" }}
+            >
+                <Alert
+                    onClose={handleCloseSnackbar}
+                    severity={snackbar.severity}
+                    sx={{ width: "100%" }}
+                >
+                    {snackbar.message}
+                </Alert>
+            </Snackbar>
         </Container>
     );
 }

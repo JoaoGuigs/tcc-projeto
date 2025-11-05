@@ -2,9 +2,16 @@ const pacienteService = require("../services/pacienteService");
 
 const createPaciente = async (req, res) => {
   try {
-    const { nome_completo } = req.body;
+    const { nome_completo, celular } = req.body;
     if (!nome_completo) {
-      return res.status(400).json({ Message: "O nome completo é obrigatorio" });
+      return res.status(400).json({ message: "O nome completo é obrigatório" });
+    }
+    // Requer nome completo (pelo menos 2 palavras)
+    if (nome_completo.trim().length < 5 || !nome_completo.trim().includes(' ')) {
+      return res.status(400).json({ message: "Informe o nome completo (nome e sobrenome)." });
+    }
+    if (!celular || String(celular).trim() === '') {
+      return res.status(400).json({ message: "O celular é obrigatório." });
     }
     const novoPaciente = await pacienteService.create(req.body);
     res
@@ -19,6 +26,10 @@ const createPaciente = async (req, res) => {
 const getAllPacientes = async (req, res) => {
   try {
     const nomeQuery = req.query.nome; // 1. Pega o parâmetro 'nome' da URL (?nome=...)
+    // Evitar buscas muito curtas: exige pelo menos 4 caracteres
+    if (nomeQuery && nomeQuery.trim().length < 4) {
+        return res.status(200).json([]);
+    }
     const pacientes = await pacienteService.getAll(nomeQuery); // 2. Passa para o service
     res.status(200).json(pacientes);
   } catch (error) {

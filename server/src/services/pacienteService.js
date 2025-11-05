@@ -7,15 +7,35 @@ const create = async (pacienteData) => {
     convenio_id,
     numero_carteirinha,
     descricao_problema,
+    profissao,
   } = pacienteData;
+  // Verificar se celular foi informado
+  if (!celular || String(celular).trim() === '') {
+    throw new Error('Celular é obrigatório para cadastro de paciente.');
+  }
+
+  // Normalizar celular (apenas dígitos)
+  const celularNormalized = String(celular).replace(/\D/g, '');
+
+  // Validar tamanho (10 ou 11 dígitos é comum no BR)
+  if (!(celularNormalized.length === 10 || celularNormalized.length === 11)) {
+    throw new Error('Número de celular inválido. Informe DDD + número (10 ou 11 dígitos).');
+  }
+
+  // Checar existência usando o valor normalizado
+  const [existing] = await db.query('SELECT id FROM pacientes WHERE celular = ?', [celularNormalized]);
+  if (existing.length > 0) {
+    throw new Error('Já existe um paciente cadastrado com este celular.');
+  }
   const sql =
-    "INSERT INTO pacientes (nome_completo, celular, convenio_id, numero_carteirinha, descricao_problema) VALUES (?, ?, ?, ? ,?)";
+    "INSERT INTO pacientes (nome_completo, celular, convenio_id, numero_carteirinha, descricao_problema, profissao) VALUES (?, ?, ?, ?, ?, ?)";
   const [result] = await db.query(sql, [
     nome_completo,
-    celular,
+    celularNormalized,
     convenio_id,
     numero_carteirinha,
     descricao_problema,
+    profissao || null,
   ]);
   return { id: result.insertId };
 };

@@ -43,6 +43,22 @@ const create = async (atendimentoData) => {
         throw new Error('ID do agendamento é obrigatório para criar um atendimento.');
     }
 
+    // Verifica se já existe um atendimento para este agendamento
+    const [existingAtendimento] = await db.query(
+        'SELECT id FROM atendimentos WHERE agendamento_id = ?',
+        [agendamento_id]
+    );
+
+    if (existingAtendimento.length > 0) {
+        throw new Error('Este agendamento já possui um prontuário registrado.');
+    }
+
+    // Atualiza o status do agendamento para "Concluído"
+    await db.query(
+        'UPDATE agendamentos SET status = ? WHERE id = ?',
+        ['Concluído', agendamento_id]
+    );
+
     const sql = `
         INSERT INTO atendimentos 
         (agendamento_id, evolucao_clinica, procedimentos_realizados) 
