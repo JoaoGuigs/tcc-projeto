@@ -3,7 +3,7 @@ const router = express.Router();
 const db = require('../../database');
 
 // Buscar configurações da clínica
-router.get('/clinica', async (req, res) => {
+router.get('/ ', async (req, res) => {
   try {
     const [rows] = await db.query(
       'SELECT nome_clinica, cnpj, telefone, email FROM configuracoes_clinica LIMIT 1'
