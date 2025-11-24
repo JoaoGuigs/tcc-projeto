@@ -570,6 +570,13 @@ function AgendarConsultaPage() {
                         <Typography sx={{ fontSize: "12px", color: "#666" }}>
                           Status: {agendamento.status}
                         </Typography>
+                        {/* Informações de convênio */}
+                        {agendamento.convenio && (
+                          <Typography sx={{ fontSize: "11px", color: "#888", mt: 0.5 }}>
+                            {agendamento.convenio}
+                            {agendamento.numero_carteirinha && ` - Cart.: ${agendamento.numero_carteirinha}`}
+                          </Typography>
+                        )}
                       </Box>
                     </Box>
 

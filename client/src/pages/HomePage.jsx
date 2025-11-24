@@ -387,6 +387,13 @@ function HomePage() {
                   <div className="appointment-type">
                     {item.tipo_consulta || "Consulta Padrão"}
                   </div>
+                  {/* Informações de convênio */}
+                  {item.convenio && (
+                    <div style={{ fontSize: "0.75rem", color: "#888", marginTop: "4px" }}>
+                      {item.convenio}
+                      {item.numero_carteirinha && ` - Carteirinha: ${item.numero_carteirinha}`}
+                    </div>
+                  )}
                 </div>
 
                 {/* Botão de cancelar - só aparece se NÃO foi cancelado e NÃO tem atendimento */}

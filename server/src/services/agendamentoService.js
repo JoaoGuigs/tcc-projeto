@@ -13,10 +13,13 @@ const getByDateRange = async (dataInicio, dataFim, pacienteId = null, onlyPendin
       ag.status,
       ag.observacoes,
       p.nome_completo AS paciente_nome,
+      c.nome_convenio AS convenio,
+      p.numero_carteirinha,
       ag.profissional_id,
       at.id AS atendimento_id
     FROM agendamentos ag
       JOIN pacientes p ON ag.paciente_id = p.id
+      LEFT JOIN convenios c ON p.convenio_id = c.id
       LEFT JOIN atendimentos at ON at.agendamento_id = ag.id
     WHERE 1=1
   `;
