@@ -64,9 +64,22 @@ const getHorariosDisponiveis = async (req, res) => {
     }
 };
 
+// Função para CANCELAR um agendamento
+const cancelAgendamento = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const result = await agendamentoService.cancel(id);
+        res.status(200).json(result);
+    } catch (error) {
+        console.error("Erro no controller ao cancelar agendamento:", error);
+        res.status(500).json({ error: error.message || 'Erro interno ao cancelar agendamento' });
+    }
+};
+
 // Exporta as funções para serem usadas pelas rotas
 module.exports = {
     getAgendamentos,
     createAgendamento,
-    getHorariosDisponiveis
+    getHorariosDisponiveis,
+    cancelAgendamento
 };

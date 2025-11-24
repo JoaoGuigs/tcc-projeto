@@ -14,8 +14,14 @@ import {
   InputAdornment,
   Snackbar,
   Alert,
+  IconButton,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from "@mui/material";
-import { Search } from "@mui/icons-material";
+import { Search, Cancel } from "@mui/icons-material";
 import axios from "axios";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
@@ -38,6 +44,8 @@ function AgendarConsultaPage() {
   const [selectedDate, setSelectedDate] = useState(dayjs()); // Usa dayjs para a data
   const [availableTimes, setAvailableTimes] = useState([]); // Inicia vazio
   const [selectedTime, setSelectedTime] = useState(null);
+  const [patientAppointments, setPatientAppointments] = useState([]); // Agendamentos do paciente
+  const [confirmDialog, setConfirmDialog] = useState({ open: false, agendamentoId: null });
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -104,11 +112,59 @@ function AgendarConsultaPage() {
     }
   }, [selectedDate]); // Roda sempre que a data mudar
 
+  // Efeito para atualizar agendamentos quando a página ganha foco
+  useEffect(() => {
+    const handleFocus = () => {
+      refreshPatientAppointments();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [selectedPatient]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Handlers
-  const handleSelectPatient = (paciente) => {
+  const handleSelectPatient = async (paciente) => {
     setSelectedPatient(paciente);
     setSearchTerm(paciente.nome_completo);
     setSearchResults([]);
+    
+    // SEMPRE buscar agendamentos atualizados do servidor
+    try {
+      const response = await axios.get(`${API_URL}/agendamentos`, {
+        params: { 
+          pacienteId: paciente.id
+          // Removido o filtro de dataInicio para mostrar todos os agendamentos
+        }
+      });
+      console.log("Agendamentos encontrados:", response.data);
+      
+      // Filtrar agendamentos cancelados
+      const agendamentosAtivos = response.data.filter(ag => ag.status !== 'Cancelado');
+      setPatientAppointments(agendamentosAtivos);
+    } catch (error) {
+      console.error("Erro ao buscar agendamentos do paciente:", error);
+      setPatientAppointments([]);
+    }
+  };
+
+  // Função para recarregar os agendamentos do paciente selecionado
+  const refreshPatientAppointments = async () => {
+    if (selectedPatient) {
+      try {
+        const response = await axios.get(`${API_URL}/agendamentos`, {
+          params: { 
+            pacienteId: selectedPatient.id
+          }
+        });
+        console.log("Agendamentos atualizados:", response.data);
+        
+        // Filtrar agendamentos cancelados
+        const agendamentosAtivos = response.data.filter(ag => ag.status !== 'Cancelado');
+        setPatientAppointments(agendamentosAtivos);
+      } catch (error) {
+        console.error("Erro ao atualizar agendamentos:", error);
+      }
+    }
   };
 
   const handleDateChange = (newDate) => {
@@ -155,6 +211,31 @@ function AgendarConsultaPage() {
     } catch (error) {
       console.error("Erro ao confirmar agendamento:", error);
       showSnackbar(error.response?.data?.message || "Erro ao confirmar agendamento.", "error");
+    }
+  };
+
+  // Funções para cancelar agendamento
+  const handleCancelClick = (agendamentoId) => {
+    setConfirmDialog({ open: true, agendamentoId });
+  };
+
+  const handleCloseDialog = () => {
+    setConfirmDialog({ open: false, agendamentoId: null });
+  };
+
+  const handleConfirmCancel = async () => {
+    try {
+      await axios.delete(`${API_URL}/agendamentos/${confirmDialog.agendamentoId}`);
+      showSnackbar("Agendamento cancelado com sucesso!", "success");
+      
+      // Atualizar a lista buscando do servidor
+      await refreshPatientAppointments();
+      
+      handleCloseDialog();
+    } catch (error) {
+      console.error("Erro ao cancelar agendamento:", error);
+      showSnackbar("Erro ao cancelar agendamento.", "error");
+      handleCloseDialog();
     }
   };
 
@@ -417,6 +498,102 @@ function AgendarConsultaPage() {
             </Grid>
           </Box>
 
+          {/* Agendamentos Existentes do Paciente */}
+          {selectedPatient && (
+            <Box sx={{ mt: 4, mb: 3 }}>
+              <Typography
+                variant="subtitle1"
+                sx={{ mb: 2, fontWeight: 600, color: "#2c3e50" }}
+              >
+                Agendamentos de {selectedPatient.nome_completo}
+              </Typography>
+              {patientAppointments.length === 0 ? (
+                <Box
+                  sx={{
+                    backgroundColor: "#f8f9fa",
+                    borderRadius: "8px",
+                    padding: "24px",
+                    border: "1px solid #e0e0e0",
+                    textAlign: "center",
+                  }}
+                >
+                  <Typography sx={{ color: "#666", fontSize: "14px" }}>
+                    Nenhum agendamento encontrado para este paciente.
+                  </Typography>
+                </Box>
+              ) : (
+                <Box
+                  sx={{
+                    backgroundColor: "#f8f9fa",
+                    borderRadius: "8px",
+                    padding: "16px",
+                    border: "1px solid #e0e0e0",
+                  }}
+                >
+                  {patientAppointments.map((agendamento) => (
+                  <Box
+                    key={agendamento.id}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      padding: "12px",
+                      backgroundColor: "white",
+                      borderRadius: "6px",
+                      mb: 1,
+                      border: "1px solid #e8e8e8",
+                      "&:last-child": { mb: 0 },
+                    }}
+                  >
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                      <Box
+                        sx={{
+                          backgroundColor: "#2c3e50",
+                          color: "white",
+                          borderRadius: "6px",
+                          padding: "8px 12px",
+                          minWidth: "100px",
+                          textAlign: "center",
+                        }}
+                      >
+                        <Typography sx={{ fontSize: "13px", fontWeight: 600 }}>
+                          {dayjs(agendamento.data_hora).format("DD/MM/YYYY")}
+                        </Typography>
+                        <Typography sx={{ fontSize: "16px", fontWeight: 700 }}>
+                          {dayjs(agendamento.data_hora).format("HH:mm")}
+                        </Typography>
+                      </Box>
+                      <Box>
+                        <Typography sx={{ fontSize: "14px", fontWeight: 500 }}>
+                          {agendamento.tipo_consulta || "Consulta Padrão"}
+                        </Typography>
+                        <Typography sx={{ fontSize: "12px", color: "#666" }}>
+                          Status: {agendamento.status}
+                        </Typography>
+                      </Box>
+                    </Box>
+
+                    {/* Botão de cancelar - só aparece se NÃO foi cancelado e NÃO tem atendimento */}
+                    {agendamento.status !== "Cancelado" && !agendamento.atendimento_id && (
+                      <IconButton
+                        onClick={() => handleCancelClick(agendamento.id)}
+                        size="small"
+                        sx={{
+                          color: "#d32f2f",
+                          "&:hover": { backgroundColor: "#ffebee" },
+                        }}
+                        title="Cancelar agendamento"
+                      >
+                        <Cancel />
+                      </IconButton>
+                    )}
+                  </Box>
+                ))}
+              </Box>
+              )}
+            </Box>
+          )}
+
           {/* Botões de Ação */}
           <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 2 }}>
             <Button
@@ -478,6 +655,24 @@ function AgendarConsultaPage() {
           {snackbar.message}
         </Alert>
       </Snackbar>
+
+      {/* Diálogo de Confirmação */}
+      <Dialog open={confirmDialog.open} onClose={handleCloseDialog}>
+        <DialogTitle>Confirmar Cancelamento</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Tem certeza que deseja cancelar este agendamento? Esta ação não pode ser desfeita.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog} color="inherit">
+            Não
+          </Button>
+          <Button onClick={handleConfirmCancel} color="error" variant="contained">
+            Sim, Cancelar
+          </Button>
+        </DialogActions>
+      </Dialog>
     </LocalizationProvider>
   );
 }

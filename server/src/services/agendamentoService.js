@@ -12,8 +12,9 @@ const getByDateRange = async (dataInicio, dataFim, pacienteId = null, onlyPendin
       ag.paciente_id,
       ag.status,
       ag.observacoes,
-        p.nome_completo AS paciente_nome,
-        ag.profissional_id
+      p.nome_completo AS paciente_nome,
+      ag.profissional_id,
+      at.id AS atendimento_id
     FROM agendamentos ag
       JOIN pacientes p ON ag.paciente_id = p.id
       LEFT JOIN atendimentos at ON at.agendamento_id = ag.id
@@ -136,8 +137,36 @@ const create = async (agendamentoData) => {
   return { id: result.insertId };
 };
 
+// Função para CANCELAR um agendamento
+const cancel = async (id) => {
+  if (!id) {
+    throw new Error("ID do agendamento é obrigatório.");
+  }
+
+  // Verificar se o agendamento existe
+  const [agendamento] = await db.query(
+    'SELECT id, status FROM agendamentos WHERE id = ?',
+    [id]
+  );
+
+  if (agendamento.length === 0) {
+    throw new Error("Agendamento não encontrado.");
+  }
+
+  if (agendamento[0].status === 'Cancelado') {
+    throw new Error("Agendamento já está cancelado.");
+  }
+
+  // Atualizar o status para 'Cancelado'
+  const sql = 'UPDATE agendamentos SET status = ? WHERE id = ?';
+  await db.query(sql, ['Cancelado', id]);
+
+  return { message: 'Agendamento cancelado com sucesso' };
+};
+
 module.exports = {
   getByDateRange,
   getAvailableTimesByDate,
   create,
+  cancel,
 };

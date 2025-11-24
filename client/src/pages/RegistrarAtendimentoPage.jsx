@@ -80,7 +80,13 @@ function RegistrarAtendimentoPage() {
             const response = await axios.get(`${API_URL}/agendamentos`, {
                 params: { pacienteId: paciente.id, semAtendimento: true }
             });
-            setPatientAppointments(response.data);
+            
+            // Filtrar agendamentos cancelados E agendamentos futuros (só mostra do passado)
+            const agora = dayjs();
+            const agendamentosValidos = response.data.filter(ag => 
+                ag.status !== 'Cancelado' && dayjs(ag.data_hora).isBefore(agora)
+            );
+            setPatientAppointments(agendamentosValidos);
 
         } catch (err) {
             console.error('Erro ao buscar agendamentos do paciente:', err);
@@ -134,7 +140,13 @@ function RegistrarAtendimentoPage() {
                 const response = await axios.get(`${API_URL}/agendamentos`, {
                     params: { pacienteId: selectedPatient.id, semAtendimento: true }
                 });
-                setPatientAppointments(response.data);
+                
+                // Filtrar agendamentos cancelados E agendamentos futuros (só mostra do passado)
+                const agora = dayjs();
+                const agendamentosValidos = response.data.filter(ag => 
+                    ag.status !== 'Cancelado' && dayjs(ag.data_hora).isBefore(agora)
+                );
+                setPatientAppointments(agendamentosValidos);
             }
 
         } catch (err) {

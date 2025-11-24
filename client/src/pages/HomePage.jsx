@@ -11,6 +11,14 @@ import {
   Button,
   ButtonGroup,
   Box,
+  IconButton,
+  Snackbar,
+  Alert,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from "@mui/material";
 import {
   Search,
@@ -20,6 +28,7 @@ import {
   Today,
   DateRange,
   EventNote,
+  Cancel,
 } from "@mui/icons-material";
 import axios from "axios";
 import { Link as RouterLink } from "react-router-dom";
@@ -39,6 +48,8 @@ function HomePage() {
   const [viewMode, setViewMode] = useState("hoje"); // 'hoje', 'semana', 'mes', 'personalizado'
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
+  const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
+  const [confirmDialog, setConfirmDialog] = useState({ open: false, agendamentoId: null });
 
   // 3. Primeiro useEffect: Define o título da página no Header
   useEffect(() => {
@@ -76,8 +87,12 @@ function HomePage() {
 
         // Chama a rota do backend que criamos
         const response = await axios.get(`${API_URL}/agendamentos`, { params });
-        setAgendaDoDia(response.data); // Guarda os dados no estado
-        setAgendaDoDiaOriginal(response.data); // Guarda a lista original
+        
+        // Filtrar agendamentos cancelados
+        const agendamentosAtivos = response.data.filter(ag => ag.status !== 'Cancelado');
+        
+        setAgendaDoDia(agendamentosAtivos); // Guarda os dados no estado
+        setAgendaDoDiaOriginal(agendamentosAtivos); // Guarda a lista original
       } catch (error) {
         console.error("Erro ao buscar agendamentos:", error);
       }
@@ -127,7 +142,37 @@ function HomePage() {
     }
   };
 
-  // 8. Função para obter o título da agenda baseado no modo
+  // 8. Funções para cancelar agendamento
+  const handleCancelClick = (agendamentoId) => {
+    setConfirmDialog({ open: true, agendamentoId });
+  };
+
+  const handleCloseDialog = () => {
+    setConfirmDialog({ open: false, agendamentoId: null });
+  };
+
+  const handleConfirmCancel = async () => {
+    try {
+      await axios.delete(`${API_URL}/agendamentos/${confirmDialog.agendamentoId}`);
+      setSnackbar({ open: true, message: "Agendamento cancelado com sucesso!", severity: "success" });
+      
+      // Remover o agendamento da lista
+      setAgendaDoDia(prev => prev.filter(ag => ag.id !== confirmDialog.agendamentoId));
+      setAgendaDoDiaOriginal(prev => prev.filter(ag => ag.id !== confirmDialog.agendamentoId));
+      
+      handleCloseDialog();
+    } catch (error) {
+      console.error("Erro ao cancelar agendamento:", error);
+      setSnackbar({ open: true, message: "Erro ao cancelar agendamento.", severity: "error" });
+      handleCloseDialog();
+    }
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar({ ...snackbar, open: false });
+  };
+
+  // 9. Função para obter o título da agenda baseado no modo
   const getAgendaTitle = () => {
     if (viewMode === "hoje") return "Agenda do Dia";
     if (viewMode === "semana") return "Agenda da Semana";
@@ -343,11 +388,56 @@ function HomePage() {
                     {item.tipo_consulta || "Consulta Padrão"}
                   </div>
                 </div>
+
+                {/* Botão de cancelar - só aparece se NÃO foi cancelado e NÃO tem atendimento */}
+                {item.status !== "Cancelado" && !item.atendimento_id && (
+                  <IconButton
+                    onClick={() => handleCancelClick(item.id)}
+                    size="small"
+                    sx={{
+                      color: "#d32f2f",
+                      "&:hover": { backgroundColor: "#ffebee" },
+                    }}
+                    title="Cancelar agendamento"
+                  >
+                    <Cancel />
+                  </IconButton>
+                )}
               </div>
             ))}
           </div>
         )}
       </Paper>
+
+      {/* Diálogo de Confirmação */}
+      <Dialog open={confirmDialog.open} onClose={handleCloseDialog}>
+        <DialogTitle>Confirmar Cancelamento</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Tem certeza que deseja cancelar este agendamento? Esta ação não pode ser desfeita.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseDialog} color="inherit">
+            Não
+          </Button>
+          <Button onClick={handleConfirmCancel} color="error" variant="contained">
+            Sim, Cancelar
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Snackbar de Feedback */}
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+      >
+        <Alert onClose={handleCloseSnackbar} severity={snackbar.severity} sx={{ width: "100%" }}>
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </div>
   );
 }
