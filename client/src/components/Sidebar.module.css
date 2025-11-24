@@ -22,13 +22,17 @@
 /* Estilo para o ícone */
 .icon {
   min-width: 40px;
-  color: white; /* Herda a cor branca da lista */
+  color: white !important; /* Força a cor branca */
 }
 
+/* Garante cor branca em todos os estados */
+.listItem .icon,
+.listItem:hover .icon,
+.linkWrapper .Mui-selected .icon {
+   color: white !important;
+}
 
+/* Fundo quando selecionado */
 .linkWrapper .Mui-selected {
   background-color: rgba(255, 255, 255, 0.08) !important;
-}
-.linkWrapper .Mui-selected .icon {
-   color: white !important; /* Garante que o ícone fique branco quando selecionado */
 }
