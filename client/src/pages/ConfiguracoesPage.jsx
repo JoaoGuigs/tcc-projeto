@@ -156,8 +156,8 @@ const ConfiguracoesPage = () => {
   };
 
   return (
-    <Box sx={{ padding: "32px 48px", width: "100%" }}>
-      <Box sx={{ display: "flex", flexDirection: "column", gap: 3, maxWidth: "900px" }}>
+    <Box sx={{ padding: "32px 48px", width: "100%", display: "flex", justifyContent: "center" }}>
+      <Box sx={{ display: "flex", flexDirection: "column", gap: 3, maxWidth: "900px", width: "100%" }}>
         {/* Dados da Clínica */}
         <Paper
           sx={{

@@ -9,6 +9,7 @@ import {
   Avatar,
   Snackbar,
   Alert,
+  Link,
 } from "@mui/material";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import { useNavigate } from "react-router-dom";
@@ -144,6 +145,32 @@ function LoginPage() {
             >
               Entrar
             </Button>
+
+            <Box sx={{ textAlign: "center", mt: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                Não tem uma conta?{" "}
+                <Link
+                  component="button"
+                  type="button"
+                  variant="body2"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate("/cadastro");
+                  }}
+                  sx={{
+                    cursor: "pointer",
+                    color: "#202938",
+                    fontWeight: 600,
+                    textDecoration: "none",
+                    "&:hover": {
+                      textDecoration: "underline",
+                    },
+                  }}
+                >
+                  Cadastre-se aqui
+                </Link>
+              </Typography>
+            </Box>
           </Box>
         </Box>
       </Container>
