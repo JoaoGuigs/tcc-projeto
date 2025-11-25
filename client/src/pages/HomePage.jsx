@@ -19,6 +19,8 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
+  Typography,
+  Divider,
 } from "@mui/material";
 import {
   Search,
@@ -33,7 +35,14 @@ import {
 import axios from "axios";
 import { Link as RouterLink } from "react-router-dom";
 import dayjs from "dayjs";
+import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
+import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
+import "dayjs/locale/pt-br";
 import "./css/HomePage.css";
+
+dayjs.extend(isSameOrBefore);
+dayjs.extend(isSameOrAfter);
+dayjs.locale("pt-br");
 
 const API_URL = "http://localhost:3001";
 
@@ -179,6 +188,27 @@ function HomePage() {
     if (viewMode === "mes") return "Agenda do Mês";
     if (viewMode === "personalizado") return "Agendamentos por Período";
     return "Agendamentos";
+  };
+
+  // 10. Função para agrupar agendamentos por dia
+  const groupByDay = (agendamentos) => {
+    const grupos = {};
+    
+    agendamentos.forEach((item) => {
+      const diaKey = dayjs(item.data_hora).format("YYYY-MM-DD");
+      if (!grupos[diaKey]) {
+        grupos[diaKey] = [];
+      }
+      grupos[diaKey].push(item);
+    });
+    
+    // Ordenar os dias
+    return Object.keys(grupos)
+      .sort()
+      .map(diaKey => ({
+        dia: diaKey,
+        agendamentos: grupos[diaKey]
+      }));
   };
 
   // 5. O JSX (visual) da sua página
@@ -360,26 +390,19 @@ function HomePage() {
                 : "Nenhum agendamento encontrado para este período."}
             </p>
           </div>
-        ) : (
+        ) : viewMode === "hoje" ? (
+          // Modo "Hoje" - sem separadores
           <div className="appointments-list">
             {agendaDoDia.map((item) => (
               <div key={item.id} className="appointment-item">
-                {/* Horário e Data (se não for modo "hoje") */}
                 <div className="appointment-time">
-                  {viewMode !== "hoje" && (
-                    <div style={{ fontSize: "0.75rem", color: "#666" }}>
-                      {dayjs(item.data_hora).format("DD/MM")}
-                    </div>
-                  )}
                   {dayjs(item.data_hora).format("HH:mm")}
                 </div>
 
-                {/* Avatar do paciente */}
                 <div className="appointment-avatar">
                   {item.paciente_nome?.charAt(0).toUpperCase() || "?"}
                 </div>
 
-                {/* Informações do paciente */}
                 <div className="appointment-info">
                   <div className="appointment-patient-name">
                     {item.paciente_nome}
@@ -387,7 +410,6 @@ function HomePage() {
                   <div className="appointment-type">
                     {item.tipo_consulta || "Consulta Padrão"}
                   </div>
-                  {/* Informações de convênio */}
                   {item.convenio && (
                     <div style={{ fontSize: "0.75rem", color: "#888", marginTop: "4px" }}>
                       {item.convenio}
@@ -396,7 +418,6 @@ function HomePage() {
                   )}
                 </div>
 
-                {/* Botão de cancelar - só aparece se NÃO foi cancelado e NÃO tem atendimento */}
                 {item.status !== "Cancelado" && !item.atendimento_id && (
                   <IconButton
                     onClick={() => handleCancelClick(item.id)}
@@ -411,6 +432,74 @@ function HomePage() {
                   </IconButton>
                 )}
               </div>
+            ))}
+          </div>
+        ) : (
+          // Modos "Semana", "Mês" e "Personalizado" - com separadores por dia
+          <div className="appointments-list">
+            {groupByDay(agendaDoDia).map((grupo, index) => (
+              <React.Fragment key={grupo.dia}>
+                {/* Separador de Dia */}
+                <Box sx={{ mb: 2, mt: index > 0 ? 3 : 0 }}>
+                  <Typography
+                    variant="subtitle1"
+                    sx={{
+                      fontWeight: 600,
+                      color: "#2c3e50",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      mb: 1,
+                    }}
+                  >
+                    <CalendarToday sx={{ fontSize: "1rem" }} />
+                    {dayjs(grupo.dia).format("dddd, DD [de] MMMM [de] YYYY")}
+                  </Typography>
+                  <Divider sx={{ mb: 2 }} />
+                </Box>
+
+                {/* Agendamentos do dia */}
+                {grupo.agendamentos.map((item) => (
+                  <div key={item.id} className="appointment-item">
+                    <div className="appointment-time">
+                      {dayjs(item.data_hora).format("HH:mm")}
+                    </div>
+
+                    <div className="appointment-avatar">
+                      {item.paciente_nome?.charAt(0).toUpperCase() || "?"}
+                    </div>
+
+                    <div className="appointment-info">
+                      <div className="appointment-patient-name">
+                        {item.paciente_nome}
+                      </div>
+                      <div className="appointment-type">
+                        {item.tipo_consulta || "Consulta Padrão"}
+                      </div>
+                      {item.convenio && (
+                        <div style={{ fontSize: "0.75rem", color: "#888", marginTop: "4px" }}>
+                          {item.convenio}
+                          {item.numero_carteirinha && ` - Carteirinha: ${item.numero_carteirinha}`}
+                        </div>
+                      )}
+                    </div>
+
+                    {item.status !== "Cancelado" && !item.atendimento_id && (
+                      <IconButton
+                        onClick={() => handleCancelClick(item.id)}
+                        size="small"
+                        sx={{
+                          color: "#d32f2f",
+                          "&:hover": { backgroundColor: "#ffebee" },
+                        }}
+                        title="Cancelar agendamento"
+                      >
+                        <Cancel />
+                      </IconButton>
+                    )}
+                  </div>
+                ))}
+              </React.Fragment>
             ))}
           </div>
         )}
