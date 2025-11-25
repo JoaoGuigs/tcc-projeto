@@ -36,9 +36,6 @@ function RelatorioPacientePage() {
             if (searchTerm.length > 2) {
                 setLoading(true);
                 setError('');
-                // Limpa detalhes e histórico ao começar uma nova busca
-                setSelectedPatientDetails(null); 
-                setAtendimentoHistory([]);     
                 try {
                     const response = await axios.get(`${API_URL}/pacientes?nome=${searchTerm}`);
                     setSearchResults(response.data);
@@ -100,7 +97,14 @@ function RelatorioPacientePage() {
                     variant="outlined"
                     size="small"
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        // Limpa a seleção quando o usuário começa a digitar novamente
+                        if (selectedPatientDetails) {
+                            setSelectedPatientDetails(null);
+                            setAtendimentoHistory([]);
+                        }
+                    }}
                     InputProps={{
                         startAdornment: ( <InputAdornment position="start"> <Search sx={{ color: 'action.active' }} /> </InputAdornment> ), // Cor do ícone
                     }}

@@ -63,10 +63,20 @@ function PacienteCadastroPage() {
 
   const handleChange = (event) => {
     const { name, value } = event.target;
-    setFormData((prevState) => ({
-      ...prevState,
-      [name]: value,
-    }));
+    
+    // Se for o campo numero_carteirinha, permite apenas números
+    if (name === 'numero_carteirinha') {
+      const onlyNumbers = value.replace(/\D/g, '');
+      setFormData((prevState) => ({
+        ...prevState,
+        [name]: onlyNumbers,
+      }));
+    } else {
+      setFormData((prevState) => ({
+        ...prevState,
+        [name]: value,
+      }));
+    }
   };
 
   // Formata o telefone conforme o usuário digita: (DD) 9xxxx-xxxx ou (DD) xxxx-xxxx

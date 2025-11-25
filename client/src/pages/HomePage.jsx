@@ -219,7 +219,7 @@ function HomePage() {
 
         <Card
           component={RouterLink}
-          to="/agenda/nova"
+          to="/agendar"
           className="action-card"
         >
           <CardContent className="action-card-content">

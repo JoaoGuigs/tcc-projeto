@@ -52,9 +52,6 @@ function RegistrarAtendimentoPage() {
             if (searchTerm && searchTerm.trim().length >= 4) {
                 setLoadingSearch(true);
                 setError('');
-                setSelectedPatient(null); // Limpa seleção ao buscar de novo
-                setPatientAppointments([]);
-                setSelectedAppointmentId(null);
                 try {
                     const response = await axios.get(`${API_URL}/pacientes?nome=${searchTerm}`);
                     setSearchResults(response.data);
@@ -166,7 +163,15 @@ function RegistrarAtendimentoPage() {
                     placeholder="Digite o nome do paciente..."
                     variant="outlined" size="small"
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => {
+                        setSearchTerm(e.target.value);
+                        // Limpa a seleção quando o usuário começa a digitar novamente
+                        if (selectedPatient) {
+                            setSelectedPatient(null);
+                            setPatientAppointments([]);
+                            setSelectedAppointmentId(null);
+                        }
+                    }}
                     InputProps={{ startAdornment: ( <InputAdornment position="start"> <Search/> </InputAdornment> ), }}
                 />
                 {searchResults.length > 0 && (
