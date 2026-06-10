@@ -12,3 +12,12 @@ yarn-error.log*
 
 # Arquivos de sistema operacional
 .DS_Store
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+*.egg-info/
