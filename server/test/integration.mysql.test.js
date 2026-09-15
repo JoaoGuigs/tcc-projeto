@@ -1,5 +1,7 @@
 require("dotenv").config();
 
+const { ensureTestDatabase } = require("./helpers/testDatabase");
+
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const mysql = require("mysql2/promise");
@@ -11,6 +13,7 @@ const atendimentoService = require("../src/services/atendimentoService");
 const pacienteService = require("../src/services/pacienteService");
 const usuarioService = require("../src/services/usuarioService");
 const whatsappEventService = require("../src/services/whatsappEventService");
+const waitlistService = require("../src/services/waitlistService");
 
 let available = false;
 let seed = null;
@@ -37,11 +40,13 @@ function requireDb(t) {
 
 test.before(async () => {
   try {
+    await ensureTestDatabase(config);
     await withAdmin(async (connection) => {
       await connection.query("SELECT 1");
       await connection.query(`
         SET FOREIGN_KEY_CHECKS = 0;
         DELETE FROM whatsapp_eventos;
+        DELETE FROM lista_espera;
         DELETE FROM atendimentos;
         DELETE FROM agendamentos;
         DELETE FROM pacientes;
@@ -122,6 +127,41 @@ test("cancelamento libera horário para novo agendamento", async (t) => {
     tipo_consulta: "Consulta",
   });
   assert.ok(second.id);
+});
+
+test("remarcação e atualização de status respeitam o profissional", async (t) => {
+  requireDb(t);
+  const created = await agendamentoService.create({
+    paciente_id: seed.pacienteA,
+    profissional_id: seed.profissionalId,
+    data_hora: "2030-02-01 09:00:00",
+    tipo_consulta: "Retorno",
+  });
+  await agendamentoService.update(created.id, seed.profissionalId, {
+    data_hora: "2030-02-01 10:00:00",
+    status: "Confirmado",
+  });
+  const rows = await agendamentoService.getByDateRange("2030-02-01", "2030-02-01", null, false, 100, seed.profissionalId);
+  const updated = rows.find((item) => Number(item.id) === Number(created.id));
+  assert.equal(updated.status, "Confirmado");
+  assert.match(String(updated.data_hora), /10:00:00/);
+  await assert.rejects(() => agendamentoService.update(created.id, seed.profissionalId + 999, { status: "Chegou" }), (error) => error.statusCode === 404);
+});
+
+test("lista de espera é isolada por profissional e atualiza o fluxo", async (t) => {
+  requireDb(t);
+  const created = await waitlistService.create(seed.profissionalId, {
+    paciente_id: seed.pacienteB,
+    data_preferida: "2030-02-02",
+    periodo: "Tarde",
+    observacoes: "Aceita encaixe",
+  });
+  assert.ok(created.id);
+  let rows = await waitlistService.getAll(seed.profissionalId);
+  assert.equal(rows.some((item) => Number(item.id) === Number(created.id)), true);
+  await waitlistService.updateStatus(created.id, seed.profissionalId, "Agendado");
+  rows = await waitlistService.getAll(seed.profissionalId);
+  assert.equal(rows.find((item) => Number(item.id) === Number(created.id)).status, "Agendado");
 });
 
 test("criação atômica de prontuário", async (t) => {

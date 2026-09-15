@@ -1,5 +1,7 @@
 require("dotenv").config();
 
+const { ensureTestDatabase } = require("./helpers/testDatabase");
+
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const request = require("supertest");
@@ -39,6 +41,7 @@ async function resetUsers() {
 
 test.before(async () => {
   try {
+    await ensureTestDatabase(config);
     await resetUsers();
     available = true;
   } catch (error) {
