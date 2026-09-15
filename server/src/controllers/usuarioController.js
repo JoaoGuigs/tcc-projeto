@@ -1,28 +1,45 @@
+const jwt = require("jsonwebtoken");
 const usuarioService = require("../services/usuarioService");
+const config = require("../config");
 
-const createProfissional = async (req, res) => {
+const cookieOptions = {
+  httpOnly: true,
+  secure: config.COOKIE_SECURE,
+  sameSite: "lax",
+  maxAge: 8 * 60 * 60 * 1000,
+  path: "/",
+};
+
+async function createProfissional(req, res, next) {
   try {
     const result = await usuarioService.createProfissional(req.body);
     res.status(201).json(result);
-  } catch (err) {
-    console.log("erro ao cadastrar profissional: ", err);
-    res.status(500).json({ err: "erro ao cadastrar" });
+  } catch (error) {
+    if (error.code === "ER_DUP_ENTRY") return res.status(409).json({ message: "Email ou registro já cadastrado." });
+    return next(error);
   }
-};
-
-const login = async (req,res) => {
-    try{
-        const {email, senha} = req.body;
-        if(!email || !senha){
-            return res.status(400).json({message: "Email e senha sao obrigatorios"})
-        }
-        const result = await usuarioService.login(req.body)
-        res.status(200).json(result)
-    }catch(err){
-        res.status(err.statusCode || 500).json({message: err.message})
-    }
 }
-module.exports = {
-    createProfissional,
-    login,
-};
+
+async function login(req, res, next) {
+  try {
+    const user = await usuarioService.login(req.body);
+    const token = jwt.sign({ sub: user.id, nome: user.nome, email: user.email }, config.JWT_SECRET, {
+      algorithm: "HS256",
+      expiresIn: config.JWT_EXPIRES_IN,
+    });
+    return res.cookie("session", token, cookieOptions).json({ message: "Login realizado com sucesso.", user });
+  } catch (error) {
+    if (error.statusCode) return res.status(error.statusCode).json({ message: error.message });
+    return next(error);
+  }
+}
+
+function logout(req, res) {
+  res.clearCookie("session", cookieOptions).status(204).end();
+}
+
+function me(req, res) {
+  res.json({ user: { id: req.user.sub, nome: req.user.nome, email: req.user.email } });
+}
+
+module.exports = { createProfissional, login, logout, me };
