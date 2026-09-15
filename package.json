@@ -1,19 +1,20 @@
 {
   "name": "tcc-projeto",
   "version": "1.0.0",
-  "description": "��#\u0000 \u0000t\u0000c\u0000c\u0000-\u0000p\u0000r\u0000o\u0000j\u0000e\u0000t\u0000o\u0000\r\u0000 \u0000",
-  "main": "index.js",
+  "description": "Sistema de gestao para clinica de fisioterapia",
+  "private": true,
+  "workspaces": ["client", "server"],
   "scripts": {
-    "server": "npm run dev --prefix server",
-    "client": "npm start --prefix client",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev:server": "npm run dev --workspace server",
+    "dev:client": "npm run dev --workspace client",
+    "build": "npm run build --workspace client",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "verify": "npm run test --workspace server && npm run test --workspace client && npm run typecheck --workspace client && npm run lint --workspace client && npm run build --workspace client"
   },
-  "keywords": [],
-  "author": "",
   "license": "ISC",
-  "dependencies": {
-    "@mui/icons-material": "^7.3.2",
-    "@mui/x-date-pickers": "^8.15.0",
-    "dayjs": "^1.11.18"
+  "engines": {
+    "node": ">=24 <25"
   }
 }
