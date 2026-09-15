@@ -69,8 +69,14 @@ module.exports = {
   }),
   message: z.object({ titulo: z.string().trim().min(2).max(150), mensagem: z.string().trim().min(2).max(2000) }),
   whatsappSend: z.object({
-    numero: z.string().trim().regex(/^\d{10,13}$/, "Informe DDD e número (somente dígitos)"),
+    numero: z.string().trim().regex(/^\d{10,15}$/, "Informe DDI, DDD e número (somente dígitos)"),
     texto: z.string().trim().min(1).max(2000),
+  }),
+  whatsappTemplateSend: z.object({
+    numero: z.string().trim().regex(/^\d{10,15}$/, "Informe DDI, DDD e número (somente dígitos)"),
+    nome_template: z.string().trim().regex(/^[a-z0-9_]{1,512}$/, "Nome de template inválido"),
+    idioma: z.string().trim().regex(/^[a-z]{2,3}_[A-Z]{2}$/).default("pt_BR"),
+    parametros: z.array(z.string().trim().max(1024)).max(20).default([]),
   }),
   whatsappNumeroParams: z.object({
     numero: z.string().trim().regex(/^\d{10,15}$/, "Número inválido"),

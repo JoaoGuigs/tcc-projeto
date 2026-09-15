@@ -1,7 +1,7 @@
 const db = require("../../database");
 const { parseMensagem } = require("./whatsappParserService");
 const { criarAgendamento, cancelarAgendamento } = require("./whatsappBookingService");
-const { enviarMensagem } = require("./evolutionApiService");
+const { enviarMensagem, obterMessageId } = require("./whatsappProviderService");
 const chat = require("./whatsappChatService");
 
 async function enqueue({ messageId, numero, texto }) {
@@ -30,8 +30,14 @@ async function processEvent(id) {
     if (parsed.intencao === "agendar") result = await criarAgendamento(parsed);
     else if (parsed.intencao === "cancelar") result = await cancelarAgendamento(parsed);
     else result = { mensagemResposta: "Não entendi. Use: paciente Nome dia hora, ou cancela Nome dia hora." };
-    await enviarMensagem(event.numero, result.mensagemResposta);
-    await chat.registrar({ numero: event.numero, direcao: "saida", texto: result.mensagemResposta, status: "enviada" });
+    const providerResult = await enviarMensagem(event.numero, result.mensagemResposta);
+    await chat.registrar({
+      numero: event.numero,
+      direcao: "saida",
+      texto: result.mensagemResposta,
+      status: "enviada",
+      messageId: obterMessageId(providerResult),
+    });
     await chat.atualizarStatusPorMessageId(event.message_id, "concluido");
     await db.query("UPDATE whatsapp_eventos SET status = 'concluido', ultimo_erro = NULL WHERE id = ?", [id]);
   } catch (error) {

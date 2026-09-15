@@ -3,7 +3,7 @@ const db = require("../../database");
 const config = require("../config");
 const validate = require("../middleware/validate");
 const schemas = require("../schemas");
-const { enviarMensagem } = require("../services/evolutionApiService");
+const { enviarMensagem, enviarTemplate, obterStatus, obterMessageId } = require("../services/whatsappProviderService");
 const { processEvent } = require("../services/whatsappEventService");
 const chat = require("../services/whatsappChatService");
 
@@ -41,37 +41,38 @@ router.get("/eventos", async (req, res, next) => {
 });
 
 router.get("/status", async (req, res) => {
-  const configurado = Boolean(config.EVOLUTION_API_KEY && config.EVOLUTION_INSTANCE);
-  const status = {
-    configurado,
-    instancia: config.EVOLUTION_INSTANCE || null,
-    numero_autorizado: config.NUMERO_AUTORIZADO || null,
-    conexao: configurado ? "unknown" : "nao_configurado",
-  };
-  if (!configurado) return res.json(status);
+  return res.json({ ...(await obterStatus()), numero_autorizado: config.NUMERO_AUTORIZADO || null });
+});
+
+router.post("/enviar-template", validate(schemas.whatsappTemplateSend), async (req, res) => {
+  const { numero, nome_template, idioma, parametros } = req.body;
   try {
-    const response = await fetch(
-      `${config.EVOLUTION_API_URL}/instance/connectionState/${encodeURIComponent(config.EVOLUTION_INSTANCE)}`,
-      { headers: { apikey: config.EVOLUTION_API_KEY }, signal: AbortSignal.timeout(4_000) },
-    );
-    const data = await response.json().catch(() => ({}));
-    status.conexao = data?.instance?.state || data?.state || (response.ok ? "unknown" : "indisponivel");
-  } catch {
-    status.conexao = "indisponivel";
+    const providerResult = await enviarTemplate(numero, nome_template, idioma, parametros);
+    await chat.registrar({
+      numero,
+      direcao: "saida",
+      texto: `[Template: ${nome_template}]${parametros.length ? ` ${parametros.join(" · ")}` : ""}`,
+      status: "enviada",
+      messageId: obterMessageId(providerResult),
+    });
+    return res.json({ message: "Template enviado." });
+  } catch (error) {
+    if (/não configurada|exigem o provedor|desativada/i.test(error.message)) return res.status(400).json({ message: error.message });
+    return res.status(502).json({ message: `Falha ao enviar template: ${error.message}` });
   }
-  return res.json(status);
 });
 
 router.post("/enviar", validate(schemas.whatsappSend), async (req, res) => {
   const { numero, texto } = req.body;
   try {
-    await enviarMensagem(numero, texto);
+    const providerResult = await enviarMensagem(numero, texto);
+    req.whatsappMessageId = obterMessageId(providerResult);
   } catch (error) {
     if (/não configurada/i.test(error.message)) return res.status(400).json({ message: error.message });
     return res.status(502).json({ message: `Falha ao enviar mensagem: ${error.message}` });
   }
   try {
-    await chat.registrar({ numero, direcao: "saida", texto, status: "enviada" });
+    await chat.registrar({ numero, direcao: "saida", texto, status: "enviada", messageId: req.whatsappMessageId });
   } catch (error) {
     req.log?.error({ err: error }, "Falha ao registrar mensagem enviada");
   }
