@@ -1,72 +1,62 @@
-import json
 import os
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
-from groq import Groq
+from groq import AsyncGroq
 
 from app.models.schemas import AgendamentoExtraido
+from app.services.local_parser import parse_local
 
-_client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-
-_SYSTEM_PROMPT = """
-Você é um assistente de agendamento de uma clínica de fisioterapia.
-Hoje é {data_hora_atual} (fuso horário America/Sao_Paulo).
-
-Sua única tarefa é extrair informações de mensagens enviadas pela fisioterapeuta e retornar
-EXATAMENTE um objeto JSON com as seguintes chaves:
-
-- intencao: "agendar" | "cancelar" | "desconhecido"
-- paciente: nome do paciente como string, ou null se não identificado
-- data: data no formato YYYY-MM-DD, ou null se não identificada
-  * Ao calcular dias da semana relativos ("segunda", "terça"...), use SEMPRE a próxima
-    ocorrência a partir de hoje (não inclua o dia atual se já passou).
-  * "semana que vem segunda" = segunda da semana seguinte.
-  * "hoje" = data de hoje.
-  * "amanhã" = data de amanhã.
-- hora: horário no formato HH:MM (24h), ou null se não identificado
-  * "14h" = "14:00", "14:30" = "14:30", "2 da tarde" = "14:00"
-
-Retorne SOMENTE o JSON, sem explicações, sem markdown, sem blocos de código.
-
-Exemplos:
-Entrada: "paciente rogerio segunda 14h"
-Saída: {{"intencao": "agendar", "paciente": "Rogério", "data": "2026-06-15", "hora": "14:00"}}
-
-Entrada: "cancela joao amanha 9h"
-Saída: {{"intencao": "cancelar", "paciente": "João", "data": "2026-06-11", "hora": "09:00"}}
-""".strip()
+_client = None
 
 
-def _build_system_prompt() -> str:
+def _get_client() -> AsyncGroq:
+    global _client
+    if _client is None:
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            raise RuntimeError("GROQ_API_KEY não configurada para o fallback de IA.")
+        _client = AsyncGroq(api_key=api_key, timeout=8.0)
+    return _client
+
+
+def _system_prompt() -> str:
     now = datetime.now(ZoneInfo("America/Sao_Paulo"))
-    dias_semana = ["segunda-feira", "terça-feira", "quarta-feira",
-                   "quinta-feira", "sexta-feira", "sábado", "domingo"]
-    data_hora_formatada = (
-        f"{dias_semana[now.weekday()]}, {now.strftime('%d/%m/%Y')} às {now.strftime('%H:%M')}"
-    )
-    return _SYSTEM_PROMPT.format(data_hora_atual=data_hora_formatada)
+    return f"""Você extrai dados de agendamento de uma clínica de fisioterapia.
+Agora é {now.isoformat()} no fuso America/Sao_Paulo.
+Calcule datas relativas a partir desse instante. Para um dia da semana, escolha a próxima ocorrência.
+Retorne intenção, nome do paciente, data YYYY-MM-DD e hora HH:MM. Use null quando não identificar um campo."""
 
 
-def parse_mensagem(mensagem: str) -> AgendamentoExtraido:
-    """Envia a mensagem para o Groq e retorna os dados extraídos."""
-    resposta = _client.chat.completions.create(
-        model=os.getenv("GROQ_MODEL", "llama-3.1-8b-instant"),
-        messages=[
-            {"role": "system", "content": _build_system_prompt()},
-            {"role": "user", "content": mensagem},
-        ],
+async def parse_mensagem(mensagem: str) -> AgendamentoExtraido:
+    local = parse_local(mensagem, datetime.now(ZoneInfo("America/Sao_Paulo")))
+    if local:
+        return local
+
+    response = await _get_client().chat.completions.create(
+        model=os.getenv("GROQ_MODEL", "openai/gpt-oss-20b"),
+        messages=[{"role": "system", "content": _system_prompt()}, {"role": "user", "content": mensagem}],
         temperature=0,
-        max_tokens=200,
-        response_format={"type": "json_object"},
+        max_tokens=150,
+        response_format={
+            "type": "json_schema",
+            "json_schema": {
+                "name": "agendamento_extraido",
+                "strict": True,
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "intencao": {"type": "string", "enum": ["agendar", "cancelar", "desconhecido"]},
+                        "paciente": {"type": ["string", "null"]},
+                        "data": {"type": ["string", "null"]},
+                        "hora": {"type": ["string", "null"]},
+                        "erro": {"type": ["string", "null"]},
+                    },
+                    "required": ["intencao", "paciente", "data", "hora", "erro"],
+                    "additionalProperties": False,
+                },
+            },
+        },
     )
-
-    conteudo = resposta.choices[0].message.content or "{}"
-    dados = json.loads(conteudo)
-
-    return AgendamentoExtraido(
-        intencao=dados.get("intencao", "desconhecido"),
-        paciente=dados.get("paciente"),
-        data=dados.get("data"),
-        hora=dados.get("hora"),
-    )
+    content = response.choices[0].message.content or "{}"
+    return AgendamentoExtraido.model_validate_json(content)

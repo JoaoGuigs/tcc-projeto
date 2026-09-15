@@ -12,4 +12,4 @@ async def parse(body: ParseRequest) -> AgendamentoExtraido:
     if not body.mensagem or not body.mensagem.strip():
         raise HTTPException(status_code=400, detail="Campo 'mensagem' é obrigatório.")
 
-    return parse_mensagem(body.mensagem.strip())
+    return await parse_mensagem(body.mensagem.strip())
