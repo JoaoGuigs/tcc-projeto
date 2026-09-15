@@ -1,13 +1,11 @@
 // client/src/pages/CadastroUsuarioPage.jsx
 
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 import { Box, Typography, TextField, Button, Container, Alert, Snackbar } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 
 // O endereço base da sua API
-const API_URL = 'http://localhost:3001';
-
 function CadastroUsuarioPage() {
     // Estado para guardar todos os dados do formulário
     const [formData, setFormData] = useState({
@@ -56,7 +54,7 @@ function CadastroUsuarioPage() {
 
         try {
             // Chama a rota que cria um USUÁRIO + PROFISSIONAL
-            await axios.post(`${API_URL}/usuarios/profissionais`, formData);
+            await api.post('/usuarios/profissionais', formData);
             
             showSnackbar('Profissional cadastrado com sucesso! Redirecionando para o login...', 'success');
             
@@ -69,7 +67,7 @@ function CadastroUsuarioPage() {
             }, 2000);
 
         } catch (err) {
-            const errorMessage = err.response?.data?.error || 'Ocorreu um erro ao cadastrar.';
+            const errorMessage = err.userMessage || 'Ocorreu um erro ao cadastrar.';
             showSnackbar(errorMessage, 'error');
         }
     };

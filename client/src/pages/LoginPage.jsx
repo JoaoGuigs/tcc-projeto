@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import axios from "axios";
 import {
   Container,
   Box,
@@ -13,11 +12,13 @@ import {
 } from "@mui/material";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../auth/AuthContext";
 
 function LoginPage() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [snackbar, setSnackbar] = useState({
     open: false,
     message: "",
@@ -41,21 +42,14 @@ function LoginPage() {
     }
 
     try {
-      const response = await axios.post(
-        "http://localhost:3001/usuarios/login",
-        {
-          email: email,
-          senha: senha,
-        }
-      );
+      await login({ email, senha });
       showSnackbar("Login realizado com sucesso!", "success");
       setTimeout(() => {
         navigate("/home");
       }, 1000);
-      console.log("Resposta do servidor:", response.data);
     } catch (error) {
       console.error("Erro ao fazer login:", error);
-      showSnackbar(error.response?.data?.error || "Credenciais inválidas. Tente novamente.", "error");
+      showSnackbar(error.userMessage || "Credenciais inválidas. Tente novamente.", "error");
     }
   };
   return (
