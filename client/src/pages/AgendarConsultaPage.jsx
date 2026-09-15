@@ -22,7 +22,7 @@ import {
   DialogActions,
 } from "@mui/material";
 import { Search, Cancel } from "@mui/icons-material";
-import axios from "axios";
+import api from "../services/api";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { StaticDatePicker } from "@mui/x-date-pickers/StaticDatePicker";
@@ -31,8 +31,6 @@ import "dayjs/locale/pt-br"; // Import locale pt-br
 
 // Configura dayjs para usar português brasileiro
 dayjs.locale("pt-br");
-
-const API_URL = "http://localhost:3001";
 
 function AgendarConsultaPage() {
   const { setPageTitle } = useOutletContext();
@@ -67,11 +65,13 @@ function AgendarConsultaPage() {
 
   // Efeito para buscar pacientes (igual ao anterior)
   useEffect(() => {
+    const controller = new AbortController();
     const delayDebounceFn = setTimeout(async () => {
-  if (searchTerm && searchTerm.trim().length >= 4) {
+  if (searchTerm && searchTerm.trim().length >= 3) {
         try {
-          const response = await axios.get(
-            `${API_URL}/pacientes?nome=${searchTerm}`
+          const response = await api.get(
+            `/pacientes?nome=${encodeURIComponent(searchTerm)}`,
+            { signal: controller.signal }
           );
           setSearchResults(response.data);
         } catch (error) {
@@ -82,7 +82,7 @@ function AgendarConsultaPage() {
         setSearchResults([]);
       }
     }, 500);
-    return () => clearTimeout(delayDebounceFn);
+    return () => { clearTimeout(delayDebounceFn); controller.abort(); };
   }, [searchTerm]);
 
   // Efeito para buscar horários disponíveis
@@ -91,8 +91,8 @@ function AgendarConsultaPage() {
       try {
         // Por enquanto, vamos usar um profissional_id fixo (1)
         // TODO: Implementar seleção de profissional
-        const response = await axios.get(
-          `${API_URL}/agendamentos/horarios-disponiveis`, {
+        const response = await api.get(
+          "/agendamentos/horarios-disponiveis", {
             params: {
               data: selectedDate.format('YYYY-MM-DD'),
               profissional_id: 1
@@ -130,7 +130,7 @@ function AgendarConsultaPage() {
     
     // SEMPRE buscar agendamentos atualizados do servidor
     try {
-      const response = await axios.get(`${API_URL}/agendamentos`, {
+      const response = await api.get("/agendamentos", {
         params: { 
           pacienteId: paciente.id
           // Removido o filtro de dataInicio para mostrar todos os agendamentos
@@ -151,7 +151,7 @@ function AgendarConsultaPage() {
   const refreshPatientAppointments = async () => {
     if (selectedPatient) {
       try {
-        const response = await axios.get(`${API_URL}/agendamentos`, {
+        const response = await api.get("/agendamentos", {
           params: { 
             pacienteId: selectedPatient.id
           }
@@ -201,7 +201,7 @@ function AgendarConsultaPage() {
 
     try {
       // Chamada POST para a rota que ainda vamos criar no backend
-      await axios.post(`${API_URL}/agendamentos`, agendamentoData);
+      await api.post("/agendamentos", agendamentoData);
       showSnackbar("Agendamento confirmado com sucesso!", "success");
       // Limpar os campos ou navegar para outra página
       setSelectedPatient(null);
@@ -210,7 +210,7 @@ function AgendarConsultaPage() {
       setSelectedTime(null);
     } catch (error) {
       console.error("Erro ao confirmar agendamento:", error);
-      showSnackbar(error.response?.data?.message || "Erro ao confirmar agendamento.", "error");
+      showSnackbar(error.userMessage || "Erro ao confirmar agendamento.", "error");
     }
   };
 
@@ -225,7 +225,7 @@ function AgendarConsultaPage() {
 
   const handleConfirmCancel = async () => {
     try {
-      await axios.delete(`${API_URL}/agendamentos/${confirmDialog.agendamentoId}`);
+      await api.delete(`/agendamentos/${confirmDialog.agendamentoId}`);
       showSnackbar("Agendamento cancelado com sucesso!", "success");
       
       // Atualizar a lista buscando do servidor

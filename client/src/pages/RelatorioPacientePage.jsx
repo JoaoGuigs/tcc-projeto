@@ -7,12 +7,10 @@ import {
     TableContainer, Table, TableHead, TableRow, TableCell, TableBody, Button 
 } from '@mui/material';
 import { Search, Print, PictureAsPdf } from '@mui/icons-material';
-import axios from 'axios';
+import api from '../services/api';
 import dayjs from 'dayjs'; // Para formatar datas
 import 'dayjs/locale/pt-br'; // Importar o locale pt-br
 dayjs.locale('pt-br'); // Definir o locale globalmente
-
-const API_URL = 'http://localhost:3001';
 
 function RelatorioPacientePage() {
     const { setPageTitle } = useOutletContext();
@@ -32,12 +30,13 @@ function RelatorioPacientePage() {
 
     // Efeito para buscar pacientes
     useEffect(() => {
+        const controller = new AbortController();
         const delayDebounceFn = setTimeout(async () => {
             if (searchTerm.length > 2) {
                 setLoading(true);
                 setError('');
                 try {
-                    const response = await axios.get(`${API_URL}/pacientes?nome=${searchTerm}`);
+                    const response = await api.get(`/pacientes?nome=${encodeURIComponent(searchTerm)}`, { signal: controller.signal });
                     setSearchResults(response.data);
                 } catch (err) { 
                     console.error('Erro:', err); 
@@ -50,7 +49,7 @@ function RelatorioPacientePage() {
                 setSearchResults([]); 
             }
         }, 500);
-        return () => clearTimeout(delayDebounceFn);
+        return () => { clearTimeout(delayDebounceFn); controller.abort(); };
     }, [searchTerm]);
 
     // Função para buscar os detalhes E o histórico quando um paciente é selecionado
@@ -63,10 +62,11 @@ function RelatorioPacientePage() {
         setAtendimentoHistory([]);
 
         try {
-            const detailsResponse = await axios.get(`${API_URL}/pacientes/${paciente.id}`);
+            const [detailsResponse, historyResponse] = await Promise.all([
+                api.get(`/pacientes/${paciente.id}`),
+                api.get(`/atendimentos/paciente/${paciente.id}`)
+            ]);
             setSelectedPatientDetails(detailsResponse.data);
-
-            const historyResponse = await axios.get(`${API_URL}/atendimentos/paciente/${paciente.id}`);
             setAtendimentoHistory(historyResponse.data);
 
         } catch (err) {

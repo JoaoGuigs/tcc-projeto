@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import api from "../services/api";
 import {
   Box,
   TextField,
@@ -12,8 +12,6 @@ import {
   Alert,
 } from "@mui/material";
 import { useOutletContext } from "react-router-dom";
-
-const API_URL = "http://localhost:3001";
 
 function PacienteCadastroPage() {
   const { setPageTitle } = useOutletContext();
@@ -52,9 +50,9 @@ function PacienteCadastroPage() {
   useEffect(() => {
     const fetchConvenios = async () => {
       try {
-        const response = await axios.get(`${API_URL}/convenios`);
+        const response = await api.get("/convenios");
         setConvenios(response.data);
-      } catch (err) {
+      } catch {
         showSnackbar("Erro ao carregar convênios", "error");
       }
     };
@@ -143,7 +141,7 @@ function PacienteCadastroPage() {
       // Envia os dados para a rota do backend que já fizemos
       // Normaliza celular para dígitos apenas antes de enviar
       const payload = { ...formData, celular: String(formData.celular || '').replace(/\D/g, '') };
-      await axios.post(`${API_URL}/pacientes`, payload);
+      await api.post("/pacientes", payload);
       showSnackbar("Paciente cadastrado com sucesso!", "success");
       // Limpa o formulário
       setFormData({
@@ -158,7 +156,7 @@ function PacienteCadastroPage() {
       // Opcional: redireciona para a lista de pacientes (que ainda não temos)
       // setTimeout(() => navigate('/pacientes'), 2000);
     } catch (err) {
-      showSnackbar(err.response?.data?.message || "Erro ao cadastrar paciente.", "error");
+      showSnackbar(err.userMessage || "Erro ao cadastrar paciente.", "error");
     }
   };
 

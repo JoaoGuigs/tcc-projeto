@@ -32,19 +32,19 @@ import {
   EventNote,
   Cancel,
 } from "@mui/icons-material";
-import axios from "axios";
+import api from "../services/api";
 import { Link as RouterLink } from "react-router-dom";
 import dayjs from "dayjs";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 import isSameOrAfter from "dayjs/plugin/isSameOrAfter";
 import "dayjs/locale/pt-br";
 import "./css/HomePage.css";
+import { getDateRange } from "../utils/dateRanges";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 dayjs.extend(isSameOrBefore);
 dayjs.extend(isSameOrAfter);
 dayjs.locale("pt-br");
-
-const API_URL = "http://localhost:3001";
 
 function HomePage() {
   // 1. Pega a função 'setPageTitle' do MainLayout para definir o título
@@ -57,58 +57,29 @@ function HomePage() {
   const [viewMode, setViewMode] = useState("hoje"); // 'hoje', 'semana', 'mes', 'personalizado'
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
+  const [appliedRange, setAppliedRange] = useState({ dataInicio: "", dataFim: "" });
   const [snackbar, setSnackbar] = useState({ open: false, message: "", severity: "success" });
   const [confirmDialog, setConfirmDialog] = useState({ open: false, agendamentoId: null });
+  const queryClient = useQueryClient();
+  const appointmentParams = getDateRange(viewMode, appliedRange.dataInicio, appliedRange.dataFim);
+  const appointmentsQuery = useQuery({
+    queryKey: ["agendamentos", appointmentParams],
+    enabled: viewMode !== "personalizado" || Boolean(appliedRange.dataInicio && appliedRange.dataFim),
+    queryFn: async () => (await api.get("/agendamentos", { params: appointmentParams })).data,
+    select: (items) => items.filter((item) => item.status !== "Cancelado"),
+  });
+
+  useEffect(() => {
+    const items = appointmentsQuery.data || [];
+    setAgendaDoDia(items);
+    setAgendaDoDiaOriginal(items);
+  }, [appointmentsQuery.data]);
 
   // 3. Primeiro useEffect: Define o título da página no Header
   useEffect(() => {
     setPageTitle("Início");
   }, [setPageTitle]);
 
-  // 4. Segundo useEffect: Busca os dados da API quando a página carrega ou quando o modo de visualização muda
-  useEffect(() => {
-    const fetchAgendamentos = async () => {
-      try {
-        let params = {};
-        
-        if (viewMode === "hoje") {
-          // Busca apenas os agendamentos de hoje
-          const hoje = dayjs().format("YYYY-MM-DD");
-          params.dataInicio = hoje;
-          params.dataFim = hoje;
-        } else if (viewMode === "semana") {
-          // Busca os agendamentos da semana atual (domingo a sábado)
-          const inicioSemana = dayjs().startOf("week").format("YYYY-MM-DD");
-          const fimSemana = dayjs().endOf("week").format("YYYY-MM-DD");
-          params.dataInicio = inicioSemana;
-          params.dataFim = fimSemana;
-        } else if (viewMode === "mes") {
-          // Busca os agendamentos do mês atual
-          const inicioMes = dayjs().startOf("month").format("YYYY-MM-DD");
-          const fimMes = dayjs().endOf("month").format("YYYY-MM-DD");
-          params.dataInicio = inicioMes;
-          params.dataFim = fimMes;
-        } else if (viewMode === "personalizado" && dataInicio && dataFim) {
-          // Busca os agendamentos do período personalizado
-          params.dataInicio = dataInicio;
-          params.dataFim = dataFim;
-        }
-
-        // Chama a rota do backend que criamos
-        const response = await axios.get(`${API_URL}/agendamentos`, { params });
-        
-        // Filtrar agendamentos cancelados
-        const agendamentosAtivos = response.data.filter(ag => ag.status !== 'Cancelado');
-        
-        setAgendaDoDia(agendamentosAtivos); // Guarda os dados no estado
-        setAgendaDoDiaOriginal(agendamentosAtivos); // Guarda a lista original
-      } catch (error) {
-        console.error("Erro ao buscar agendamentos:", error);
-      }
-    };
-
-    fetchAgendamentos();
-  }, [viewMode, dataInicio, dataFim]); // Recarrega quando mudar o modo ou as datas
 
   // 5. Função para filtrar agendamentos
   const handleSearch = (e) => {
@@ -146,7 +117,7 @@ function HomePage() {
   // 7. Função para aplicar filtro personalizado
   const handleApplyCustomFilter = () => {
     if (dataInicio && dataFim) {
-      // O useEffect vai detectar a mudança e buscar os dados
+      setAppliedRange({ dataInicio, dataFim });
       setViewMode("personalizado");
     }
   };
@@ -162,12 +133,13 @@ function HomePage() {
 
   const handleConfirmCancel = async () => {
     try {
-      await axios.delete(`${API_URL}/agendamentos/${confirmDialog.agendamentoId}`);
+      await api.delete(`/agendamentos/${confirmDialog.agendamentoId}`);
       setSnackbar({ open: true, message: "Agendamento cancelado com sucesso!", severity: "success" });
       
       // Remover o agendamento da lista
       setAgendaDoDia(prev => prev.filter(ag => ag.id !== confirmDialog.agendamentoId));
       setAgendaDoDiaOriginal(prev => prev.filter(ag => ag.id !== confirmDialog.agendamentoId));
+      queryClient.invalidateQueries({ queryKey: ["agendamentos"] });
       
       handleCloseDialog();
     } catch (error) {

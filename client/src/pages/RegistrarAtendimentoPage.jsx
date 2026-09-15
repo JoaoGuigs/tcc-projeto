@@ -3,14 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { useOutletContext } from 'react-router-dom';
 import { 
-    Box, Typography, TextField, List, ListItem, ListItemButton, ListItemText, Paper, 
-    Grid, InputAdornment, Button, Alert, CircularProgress, Snackbar 
+    Box, Typography, TextField, List, ListItemButton, ListItemText, Paper,
+    InputAdornment, Button, Alert, CircularProgress, Snackbar
 } from '@mui/material';
 import { Search } from '@mui/icons-material';
-import axios from 'axios';
+import api from '../services/api';
 import dayjs from 'dayjs';
-
-const API_URL = 'http://localhost:3001';
 
 function RegistrarAtendimentoPage() {
     const { setPageTitle } = useOutletContext();
@@ -48,18 +46,19 @@ function RegistrarAtendimentoPage() {
 
     // Efeito para buscar pacientes
     useEffect(() => {
+        const controller = new AbortController();
         const delayDebounceFn = setTimeout(async () => {
-            if (searchTerm && searchTerm.trim().length >= 4) {
+            if (searchTerm && searchTerm.trim().length >= 3) {
                 setLoadingSearch(true);
                 setError('');
                 try {
-                    const response = await axios.get(`${API_URL}/pacientes?nome=${searchTerm}`);
+                    const response = await api.get(`/pacientes?nome=${encodeURIComponent(searchTerm)}`, { signal: controller.signal });
                     setSearchResults(response.data);
                 } catch (err) { console.error('Erro busca:', err); setSearchResults([]); setError('Erro ao buscar pacientes.'); } 
                 finally { setLoadingSearch(false); }
             } else { setSearchResults([]); }
         }, 500);
-        return () => clearTimeout(delayDebounceFn);
+        return () => { clearTimeout(delayDebounceFn); controller.abort(); };
     }, [searchTerm]);
 
     // Função para quando um paciente é selecionado
@@ -74,7 +73,7 @@ function RegistrarAtendimentoPage() {
 
         try {
             // Busca os agendamentos do paciente que ainda não têm prontuário
-            const response = await axios.get(`${API_URL}/agendamentos`, {
+            const response = await api.get('/agendamentos', {
                 params: { pacienteId: paciente.id, semAtendimento: true }
             });
             
@@ -123,7 +122,7 @@ function RegistrarAtendimentoPage() {
 
         try {
             // Chama a rota POST /atendimentos que já existe no backend
-            await axios.post(`${API_URL}/atendimentos`, atendimentoData);
+            await api.post('/atendimentos', atendimentoData);
             showSnackbar('Atendimento registrado com sucesso!', 'success');
             
             // Limpa os campos após salvar
@@ -134,7 +133,7 @@ function RegistrarAtendimentoPage() {
             
             // Atualiza a lista de agendamentos para remover o que foi registrado
             if (selectedPatient) {
-                const response = await axios.get(`${API_URL}/agendamentos`, {
+                const response = await api.get('/agendamentos', {
                     params: { pacienteId: selectedPatient.id, semAtendimento: true }
                 });
                 
@@ -147,7 +146,7 @@ function RegistrarAtendimentoPage() {
             }
 
         } catch (err) {
-            showSnackbar(err.response?.data?.error || 'Erro ao registrar atendimento.', 'error');
+            showSnackbar(err.userMessage || 'Erro ao registrar atendimento.', 'error');
         } finally {
             setLoadingSubmit(false);
         }

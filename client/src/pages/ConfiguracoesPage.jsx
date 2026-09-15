@@ -23,9 +23,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import AddIcon from '@mui/icons-material/Add';
 import WarningAmberIcon from '@mui/icons-material/WarningAmber';
 import { useOutletContext } from 'react-router-dom';
-import axios from 'axios';
-
-const API_URL = 'http://localhost:3001';
+import api from '../services/api';
 
 const ConfiguracoesPage = () => {
   const { setPageTitle } = useOutletContext();
@@ -50,7 +48,9 @@ const ConfiguracoesPage = () => {
   ]);
 
   const [openConvenioDialog, setOpenConvenioDialog] = useState(false);
+  const [openClinicDialog, setOpenClinicDialog] = useState(false);
   const [openMensagemDialog, setOpenMensagemDialog] = useState(false);
+  const [editingMessageId, setEditingMessageId] = useState(null);
   const [openDeleteDialog, setOpenDeleteDialog] = useState(false);
   const [convenioToDelete, setConvenioToDelete] = useState(null);
   const [novoConvenio, setNovoConvenio] = useState('');
@@ -70,11 +70,12 @@ const ConfiguracoesPage = () => {
     setPageTitle('Configurações do Sistema');
     fetchClinicData();
     fetchConvenios();
+    fetchMensagens();
   }, [setPageTitle]);
 
   const fetchClinicData = async () => {
     try {
-      const response = await axios.get(`${API_URL}/configuracoes/clinica`);
+      const response = await api.get('/configuracoes/clinica');
       setClinicData(response.data);
     } catch (error) {
       console.error('Erro ao carregar dados da clínica:', error);
@@ -83,10 +84,19 @@ const ConfiguracoesPage = () => {
 
   const fetchConvenios = async () => {
     try {
-      const response = await axios.get(`${API_URL}/convenios`);
+      const response = await api.get('/convenios');
       setConvenios(response.data);
     } catch (error) {
       console.error('Erro ao carregar convênios:', error);
+    }
+  };
+
+  const fetchMensagens = async () => {
+    try {
+      const response = await api.get('/configuracoes/mensagens');
+      setMensagensPadrao(response.data);
+    } catch (error) {
+      console.error('Erro ao carregar mensagens:', error);
     }
   };
 
@@ -105,12 +115,12 @@ const ConfiguracoesPage = () => {
     }
     
     try {
-      await axios.post(`${API_URL}/convenios`, { nome_convenio: novoConvenio });
+      await api.post('/convenios', { nome_convenio: novoConvenio });
       fetchConvenios();
       setNovoConvenio('');
       setOpenConvenioDialog(false);
       showSnackbar('Convênio adicionado com sucesso!', 'success');
-    } catch (error) {
+    } catch {
       showSnackbar('Erro ao adicionar convênio', 'error');
     }
   };
@@ -129,30 +139,47 @@ const ConfiguracoesPage = () => {
     if (!convenioToDelete) return;
     
     try {
-      await axios.delete(`${API_URL}/convenios/${convenioToDelete.id}`);
+      await api.delete(`/convenios/${convenioToDelete.id}`);
       fetchConvenios();
       handleCloseDeleteDialog();
       showSnackbar('Convênio excluído com sucesso!', 'success');
     } catch (error) {
-      const errorMessage = error.response?.data?.error || 'Erro ao excluir convênio';
+      const errorMessage = error.userMessage || 'Erro ao excluir convênio';
       handleCloseDeleteDialog();
       showSnackbar(errorMessage, 'error');
     }
   };
 
-  const handleAddMensagem = () => {
+  const handleAddMensagem = async () => {
     if (!novaMensagem.titulo || !novaMensagem.mensagem) {
       showSnackbar('Por favor, preencha todos os campos', 'warning');
       return;
     }
     
-    setMensagensPadrao(prev => [...prev, {
-      id: Date.now(),
-      ...novaMensagem
-    }]);
-    setNovaMensagem({ titulo: '', mensagem: '' });
-    setOpenMensagemDialog(false);
-    showSnackbar('Mensagem adicionada com sucesso!', 'success');
+    try {
+      if (editingMessageId) {
+        await api.put(`/configuracoes/mensagens/${editingMessageId}`, novaMensagem);
+      } else {
+        await api.post('/configuracoes/mensagens', novaMensagem);
+      }
+      await fetchMensagens();
+      setNovaMensagem({ titulo: '', mensagem: '' });
+      setEditingMessageId(null);
+      setOpenMensagemDialog(false);
+      showSnackbar('Mensagem salva com sucesso!', 'success');
+    } catch (error) {
+      showSnackbar(error.userMessage || 'Erro ao salvar mensagem', 'error');
+    }
+  };
+
+  const handleSaveClinic = async () => {
+    try {
+      await api.put('/configuracoes/clinica', clinicData);
+      setOpenClinicDialog(false);
+      showSnackbar('Dados da clínica salvos!', 'success');
+    } catch (error) {
+      showSnackbar(error.userMessage || 'Erro ao salvar dados da clínica', 'error');
+    }
   };
 
   return (
@@ -181,7 +208,7 @@ const ConfiguracoesPage = () => {
                 Dados da Clínica
               </Typography>
             </Box>
-            <IconButton size="small">
+            <IconButton size="small" onClick={() => setOpenClinicDialog(true)}>
               <EditIcon sx={{ fontSize: 18 }} />
             </IconButton>
           </Box>
@@ -333,7 +360,7 @@ const ConfiguracoesPage = () => {
             </Box>
             <Button
               startIcon={<AddIcon />}
-              onClick={() => setOpenMensagemDialog(true)}
+              onClick={() => { setEditingMessageId(null); setNovaMensagem({ titulo: '', mensagem: '' }); setOpenMensagemDialog(true); }}
               sx={{
                 backgroundColor: "#2c3e50",
                 color: "#fff",
@@ -381,7 +408,7 @@ const ConfiguracoesPage = () => {
                   }}
                 />
                 <ListItemSecondaryAction>
-                  <IconButton edge="end" size="small">
+                  <IconButton edge="end" size="small" onClick={() => { setEditingMessageId(msg.id); setNovaMensagem({ titulo: msg.titulo, mensagem: msg.mensagem }); setOpenMensagemDialog(true); }}>
                     <EditIcon sx={{ fontSize: 18 }} />
                   </IconButton>
                 </ListItemSecondaryAction>
@@ -392,8 +419,28 @@ const ConfiguracoesPage = () => {
       </Box>
 
       {/* Dialog para adicionar convênio */}
-      <Dialog 
-        open={openConvenioDialog} 
+      <Dialog open={openClinicDialog} onClose={() => setOpenClinicDialog(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Editar dados da clínica</DialogTitle>
+        <DialogContent>
+          {['nome_clinica', 'cnpj', 'telefone', 'email'].map((field) => (
+            <TextField
+              key={field}
+              margin="dense"
+              fullWidth
+              label={{ nome_clinica: 'Nome da clínica', cnpj: 'CNPJ', telefone: 'Telefone', email: 'Email' }[field]}
+              value={clinicData[field] || ''}
+              onChange={(event) => setClinicData((current) => ({ ...current, [field]: event.target.value }))}
+            />
+          ))}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenClinicDialog(false)}>Cancelar</Button>
+          <Button variant="contained" onClick={handleSaveClinic}>Salvar</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={openConvenioDialog}
         onClose={() => setOpenConvenioDialog(false)}
         PaperProps={{
           sx: {
