@@ -25,6 +25,15 @@ const CONNECTION = {
   nao_configurado: { label: "Não configurado", dot: "bg-[#8C6A28]" },
 };
 
+const MESSAGE_STATUS = {
+  enviada: "Enviada",
+  sent: "Enviada",
+  delivered: "Entregue",
+  read: "Lida",
+  falhou: "Falhou",
+  failed: "Falhou",
+};
+
 function initials(name) {
   const parts = String(name || "").trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) return "?";
@@ -78,7 +87,7 @@ function ConversationItem({ conversa, selected, onSelect }) {
 
 function MessageBubble({ message }) {
   const fromMe = message.direcao === "saida";
-  const failed = message.status === "falhou";
+  const failed = ["falhou", "failed"].includes(message.status);
   return (
     <div className={`flex max-w-[72%] flex-col gap-[2px] ${fromMe ? "self-end items-end" : "self-start items-start"}`}>
       <div className={`rounded-[16px] px-[14px] py-[10px] ${fromMe ? "bg-primary-soft" : "bg-canvas"}`}>
@@ -86,7 +95,7 @@ function MessageBubble({ message }) {
       </div>
       <span className="px-[4px] text-[11px] leading-[14px] text-muted">
         {dayjs(message.criado_em).format("DD/MM · HH:mm")}
-        {fromMe ? " · Enviada" : ""}
+        {fromMe ? ` · ${MESSAGE_STATUS[message.status] || "Enviada"}` : ""}
       </span>
       {failed && (
         <span className="rounded-[10px] bg-[#FBEAEA] px-[10px] py-[6px] text-[11px] leading-[14px] text-[#C62828]">
@@ -156,6 +165,7 @@ export default function WhatsAppPage() {
 
   const totalNaoLidas = conversas.reduce((acc, c) => acc + Number(c.nao_lidas || 0), 0);
   const connection = CONNECTION[status?.conexao] || CONNECTION.unknown;
+  const providerName = status?.provedor_nome || "WhatsApp";
 
   async function handleSend(event) {
     event.preventDefault();
@@ -194,12 +204,10 @@ export default function WhatsAppPage() {
             <div className="flex items-center justify-between gap-3">
               <span className="flex items-center gap-[6px] text-xs font-bold leading-[16px] text-muted">
                 <span className={`h-[7px] w-[7px] rounded-full ${connection.dot}`} />
-                {connection.label}
+                {connection.label} · {providerName}
               </span>
               {!status?.configurado && (
-                <Link to="/configuracoes" className="text-xs font-bold leading-[16px] text-primary no-underline hover:underline">
-                  Configurar →
-                </Link>
+                <span className="text-xs font-bold leading-[16px] text-[#8C6A28]">Credenciais pendentes</span>
               )}
             </div>
           </div>
@@ -326,7 +334,7 @@ export default function WhatsAppPage() {
                 </div>
                 {!status?.configurado && (
                   <span className="text-xs leading-[16px] text-muted">
-                    Envio indisponível: configure a Evolution API em Configurações.
+                    Envio indisponível: adicione as credenciais da API oficial da Meta no servidor.
                   </span>
                 )}
               </form>
@@ -340,7 +348,7 @@ export default function WhatsAppPage() {
               </span>
               <p className="font-display text-[22px] font-semibold leading-[28px] text-ink">Selecione uma conversa</p>
               <p className="max-w-[420px] text-sm leading-[20px] text-muted">
-                As mensagens recebidas no número autorizado aparecem à esquerda, com o resultado do
+                As mensagens recebidas no WhatsApp da clínica aparecem à esquerda, com o resultado do
                 agendamento feito pelo assistente. Escolha uma conversa para responder.
               </p>
             </div>
