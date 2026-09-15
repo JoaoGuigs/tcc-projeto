@@ -1,39 +1,16 @@
-// Local: server/index.js
+const app = require("./app");
+const config = require("./src/config");
+const { retryPending } = require("./src/services/whatsappEventService");
 
-require("dotenv").config();
+const server = app.listen(config.PORT, () => console.log(`Servidor rodando na porta ${config.PORT}`));
+const retryTimer = setInterval(() => retryPending().catch(console.error), 10_000);
+retryTimer.unref();
 
-const express = require("express");
-const cors = require("cors");
-const app = express();
-const port = 3001;
+function shutdown(signal) {
+  console.log(`${signal} recebido; encerrando servidor.`);
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(1), 10_000).unref();
+}
 
-// --- Middlewares Essenciais ---
-app.use(cors());
-app.use(express.json());
-
-// --- Importação das Rotas ---
-
-const usuariosRoutes = require("./src/routes/usuario.js");
-const pacientesRoutes = require("./src/routes/paciente.js");
-const conveniosRoutes = require("./src/routes/convenio.js");
-const agendamentosRoutes = require("./src/routes/agendamentos.js");
-const atendimentosRoutes = require("./src/routes/atendimentos.js");
-const configuracoesRoutes = require("./src/routes/configuracoes.js");
-const whatsappRoutes = require("./src/routes/whatsapp.js");
-
-// --- Uso das Rotas ---
-app.use("/usuarios", usuariosRoutes);
-app.use("/pacientes", pacientesRoutes);
-app.use("/convenios", conveniosRoutes);
-app.use("/agendamentos", agendamentosRoutes);
-app.use("/atendimentos", atendimentosRoutes);
-app.use("/configuracoes", configuracoesRoutes);
-app.use("/webhook", whatsappRoutes);
-app.get("/", (req, res) => {
-  res.send("API do PhysioClinic está funcionando!");
-});
-
-// --- Inicialização do Servidor ---
-app.listen(port, () => {
-  console.log(`Servidor rodando na porta ${port}`);
-});
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
