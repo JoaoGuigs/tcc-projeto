@@ -1,35 +1,14 @@
-// server/src/services/evolutionApiService.js
-//
-// Responsabilidade: enviar mensagens de volta ao WhatsApp via Evolution API.
+const config = require("../config");
 
-const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || "http://localhost:8080";
-const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || "";
-const EVOLUTION_INSTANCE = process.env.EVOLUTION_INSTANCE || "";
-
-/**
- * Envia uma mensagem de texto para um número do WhatsApp via Evolution API.
- * @param {string} numero - Número do destinatário (somente dígitos, com DDI. Ex: 5548912345678)
- * @param {string} texto  - Mensagem a ser enviada.
- */
 async function enviarMensagem(numero, texto) {
-  const url = `${EVOLUTION_API_URL}/message/sendText/${EVOLUTION_INSTANCE}`;
-
-  const resposta = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      apikey: EVOLUTION_API_KEY,
-    },
-    body: JSON.stringify({
-      number: numero,
-      text: texto,
-    }),
+  if (!config.EVOLUTION_API_KEY || !config.EVOLUTION_INSTANCE) throw new Error("Evolution API não configurada.");
+  const url = `${config.EVOLUTION_API_URL}/message/sendText/${encodeURIComponent(config.EVOLUTION_INSTANCE)}`;
+  const response = await fetch(url, {
+    method: "POST", headers: { "Content-Type": "application/json", apikey: config.EVOLUTION_API_KEY },
+    body: JSON.stringify({ number: numero, text: texto }), signal: AbortSignal.timeout(8_000),
   });
-
-  if (!resposta.ok) {
-    const erro = await resposta.text();
-    console.error(`[Evolution API] Erro ao enviar mensagem: ${resposta.status} - ${erro}`);
-  }
+  if (!response.ok) throw new Error(`Evolution API retornou erro ${response.status}.`);
+  return response.json();
 }
 
 module.exports = { enviarMensagem };
