@@ -1,0 +1,61 @@
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: tcc-projeto
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-local_change_me}
+    ports:
+      - "3310:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${DB_PASSWORD:-local_change_me}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  ai:
+    build: ./ai-service
+    environment:
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-openai/gpt-oss-20b}
+
+  api:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      CLIENT_ORIGIN: http://localhost:3000
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: ${DB_PASSWORD:-local_change_me}
+      DB_NAME: tcc-projeto
+      JWT_SECRET: ${JWT_SECRET:-local-development-secret-with-at-least-32-characters}
+      COOKIE_SECURE: "false"
+      AI_SERVICE_URL: http://ai:8000
+      EVOLUTION_API_URL: ${EVOLUTION_API_URL:-http://host.docker.internal:8080}
+      EVOLUTION_API_KEY: ${EVOLUTION_API_KEY:-}
+      EVOLUTION_INSTANCE: ${EVOLUTION_INSTANCE:-}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET:-local-webhook-secret-change-me}
+      NUMERO_AUTORIZADO: ${NUMERO_AUTORIZADO:-}
+    command: ["sh", "-c", "npm run db:migrate --workspace server && node server/index.js"]
+    depends_on:
+      mysql:
+        condition: service_healthy
+      ai:
+        condition: service_started
+
+  web:
+    build:
+      context: .
+      dockerfile: client/Dockerfile
+    ports:
+      - "3000:80"
+    depends_on:
+      - api
+
+volumes:
+  mysql_data:
