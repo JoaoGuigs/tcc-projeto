@@ -23,6 +23,7 @@ app.use("/usuarios/login", authLimiter);
 
 app.use("/usuarios", require("./src/routes/usuario"));
 app.use("/webhook", require("./src/routes/whatsapp"));
+app.use("/whatsapp", requireAuth, require("./src/routes/whatsappAdmin"));
 app.use("/pacientes", requireAuth, require("./src/routes/paciente"));
 app.use("/convenios", requireAuth, require("./src/routes/convenio"));
 app.use("/agendamentos", requireAuth, require("./src/routes/agendamentos"));
