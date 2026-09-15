@@ -26,6 +26,7 @@ app.use("/webhook", require("./src/routes/whatsapp"));
 app.use("/pacientes", requireAuth, require("./src/routes/paciente"));
 app.use("/convenios", requireAuth, require("./src/routes/convenio"));
 app.use("/agendamentos", requireAuth, require("./src/routes/agendamentos"));
+app.use("/lista-espera", requireAuth, require("./src/routes/waitlist"));
 app.use("/atendimentos", requireAuth, require("./src/routes/atendimentos"));
 app.use("/configuracoes", requireAuth, require("./src/routes/configuracoes"));
 
