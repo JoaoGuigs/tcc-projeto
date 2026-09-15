@@ -50,6 +50,18 @@ Os testes de integração MySQL do servidor rodam automaticamente quando o banco
 
 As migrations ficam em `server/migrations`. A restrição `uq_agendamentos_slot_ativo` impede duas consultas ativas para o mesmo profissional e horário. Antes de aplicar em um banco antigo, o migrador verifica duplicidades de email, celular, horários ativos, prontuários e `message_id` e aborta com detalhes se encontrar conflito.
 
-## Webhook
+## WhatsApp
 
-Configure a Evolution API para enviar `POST /webhook/whatsapp` com o cabeçalho `x-webhook-secret`. Cada mensagem é persistida em `whatsapp_eventos`, processada uma única vez e repetida até três vezes em caso de falha.
+O provedor padrão é a API oficial do WhatsApp da Meta. A Evolution API continua disponível como alternativa, selecionada por `WHATSAPP_PROVIDER=evolution`, mas não é usada quando o valor é `meta`.
+
+Para configurar a Meta:
+
+1. Crie o aplicativo no painel Meta for Developers e adicione o produto WhatsApp.
+2. Preencha `META_WHATSAPP_TOKEN`, `META_PHONE_NUMBER_ID`, `META_WABA_ID` e `META_APP_SECRET` no `server/.env`.
+3. Crie um valor secreto para `META_WEBHOOK_VERIFY_TOKEN`.
+4. No painel da Meta, use a URL pública HTTPS `https://seu-dominio/webhook/whatsapp`, informe o mesmo token de verificação e assine o campo `messages`.
+5. Defina `NUMERO_AUTORIZADO` durante os testes. Quando estiver pronto para atender pacientes, deixe-o vazio.
+
+O webhook valida o desafio `GET` e a assinatura `X-Hub-Signature-256` das notificações `POST`. As mensagens são persistidas, deduplicadas e repetidas até três vezes em caso de falha. `POST /whatsapp/enviar-template` envia templates aprovados pela Meta com parâmetros de texto no corpo.
+
+Mensagens de texto livres só podem ser enviadas dentro da janela de atendimento iniciada pelo paciente. Fora dela, use um template aprovado pela Meta, como confirmação ou lembrete de consulta.
