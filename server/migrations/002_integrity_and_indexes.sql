@@ -1,0 +1,11 @@
+ALTER TABLE usuarios ADD UNIQUE KEY uq_usuarios_email (email);
+ALTER TABLE profissionais ADD UNIQUE KEY uq_profissionais_usuario (usuario_id);
+ALTER TABLE profissionais ADD UNIQUE KEY uq_profissionais_registro (registro_profissional);
+ALTER TABLE pacientes ADD UNIQUE KEY uq_pacientes_celular (celular);
+ALTER TABLE pacientes ADD KEY ix_pacientes_nome (nome_completo);
+ALTER TABLE agendamentos ADD COLUMN slot_ativo TINYINT GENERATED ALWAYS AS (CASE WHEN status <> 'Cancelado' THEN 1 ELSE NULL END) STORED;
+ALTER TABLE agendamentos ADD UNIQUE KEY uq_agendamentos_slot_ativo (profissional_id, data_hora, slot_ativo);
+ALTER TABLE agendamentos ADD KEY ix_agendamentos_paciente_data (paciente_id, data_hora);
+ALTER TABLE atendimentos ADD UNIQUE KEY uq_atendimentos_agendamento (agendamento_id);
+ALTER TABLE whatsapp_eventos ADD UNIQUE KEY uq_whatsapp_message_id (message_id);
+ALTER TABLE whatsapp_eventos ADD KEY ix_whatsapp_fila (status, tentativas, criado_em);
