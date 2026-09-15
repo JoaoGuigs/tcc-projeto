@@ -9,11 +9,13 @@ const {
   createAgendamento,
   getHorariosDisponiveis,
   cancelAgendamento,
+  updateAgendamento,
 } = require("../controllers/agendamentoController.js");
 
 router.get("/", validate(schemas.appointmentQuery, "query"), getAgendamentos);
 router.get("/horarios-disponiveis", validate(schemas.availableTimesQuery, "query"), getHorariosDisponiveis);
 router.post("/", validate(schemas.appointment), createAgendamento);
+router.patch("/:id", validate(schemas.idParams, "params"), validate(schemas.appointmentUpdate), updateAgendamento);
 router.delete("/:id", validate(schemas.idParams, "params"), cancelAgendamento);
 
 module.exports = router;

@@ -38,8 +38,12 @@ function logout(req, res) {
   res.clearCookie("session", cookieOptions).status(204).end();
 }
 
-function me(req, res) {
-  res.json({ user: { id: req.user.sub, nome: req.user.nome, email: req.user.email } });
+async function me(req, res, next) {
+  try {
+    const user = await usuarioService.getPublicUserById(req.user.sub);
+    if (!user) return res.status(404).json({ message: "Usuário não encontrado." });
+    return res.json({ user });
+  } catch (error) { return next(error); }
 }
 
 module.exports = { createProfissional, login, logout, me };

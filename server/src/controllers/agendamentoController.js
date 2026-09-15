@@ -1,86 +1,67 @@
-// server/src/controllers/agendamentoController.js
-const agendamentoService = require('../services/agendamentoService.js');
+const agendamentoService = require("../services/agendamentoService");
+const usuarioService = require("../services/usuarioService");
 
-// Função para BUSCAR agendamentos
-const getAgendamentos = async (req, res) => {
-    try {
-        const { pacienteId, dataInicio, dataFim, semAtendimento, limite } = req.query;
-        const onlyPending = semAtendimento === 'true' || semAtendimento === '1';
-        
-        // Validar data inicial se fornecida
-        if (dataInicio && !dataInicio.match(/^\d{4}-\d{2}-\d{2}$/)) {
-            return res.status(400).json({ 
-                error: 'Data inicial deve estar no formato YYYY-MM-DD' 
-            });
-        }
+async function getProfessionalId(req) {
+  const user = await usuarioService.getPublicUserById(req.user.sub);
+  if (!user?.profissional_id) {
+    const error = new Error("Usuário não está vinculado a um profissional.");
+    error.statusCode = 403;
+    throw error;
+  }
+  return user.profissional_id;
+}
 
-        // Validar data final se fornecida
-        if (dataFim && !dataFim.match(/^\d{4}-\d{2}-\d{2}$/)) {
-            return res.status(400).json({ 
-                error: 'Data final deve estar no formato YYYY-MM-DD' 
-            });
-        }
+async function getAgendamentos(req, res) {
+  try {
+    const { pacienteId, dataInicio, dataFim, semAtendimento, limite } = req.query;
+    const result = await agendamentoService.getByDateRange(dataInicio, dataFim, pacienteId,
+      semAtendimento === "true" || semAtendimento === "1", limite, await getProfessionalId(req));
+    res.json(result);
+  } catch (error) {
+    console.error("Erro ao buscar agendamentos:", error);
+    res.status(error.statusCode || 500).json({ message: error.message || "Erro interno ao buscar agendamentos." });
+  }
+}
 
-        const agendamentos = await agendamentoService.getByDateRange(
-            dataInicio, 
-            dataFim, 
-            pacienteId,
-            onlyPending,
-            limite
-        );
-        res.status(200).json(agendamentos);
-    } catch (error) {
-        console.error("Erro no controller ao buscar agendamentos:", error);
-        res.status(500).json({ error: 'Erro interno ao buscar agendamentos' });
+async function createAgendamento(req, res) {
+  try {
+    const result = await agendamentoService.create({ ...req.body, profissional_id: await getProfessionalId(req) });
+    res.status(201).json({ message: "Agendamento criado com sucesso.", id: result.id });
+  } catch (error) {
+    console.error("Erro ao criar agendamento:", error);
+    res.status(error.statusCode || 500).json({ message: error.message || "Erro interno ao criar agendamento." });
+  }
+}
+
+async function getHorariosDisponiveis(req, res) {
+  try {
+    const professionalId = await getProfessionalId(req);
+    if (Number(req.query.profissional_id) !== Number(professionalId)) {
+      return res.status(403).json({ message: "Profissional não autorizado." });
     }
-};
+    res.json(await agendamentoService.getAvailableTimesByDate(req.query.data, professionalId));
+  } catch (error) {
+    console.error("Erro ao buscar horários disponíveis:", error);
+    res.status(error.statusCode || 500).json({ message: error.message || "Erro interno ao buscar horários disponíveis." });
+  }
+}
 
-// Função para CRIAR um novo agendamento
-const createAgendamento = async (req, res) => {
-    try {
-        // req.body contém os dados enviados pelo frontend
-        // Ex: { paciente_id: 1, profissional_id: 1, data_hora: '...', tipo_consulta: '...' }
-        const novoAgendamento = await agendamentoService.create(req.body);
-        res.status(201).json({ message: 'Agendamento criado com sucesso', id: novoAgendamento.id });
-    } catch (error) {
-        console.error("Erro no controller ao criar agendamento:", error);
-        // Retorna a mensagem de erro específica do service, se houver
-        res.status(error.statusCode || 500).json({ message: error.message || 'Erro interno ao criar agendamento' });
-    }
-};
+async function updateAgendamento(req, res) {
+  try {
+    res.json(await agendamentoService.update(req.params.id, await getProfessionalId(req), req.body));
+  } catch (error) {
+    console.error("Erro ao atualizar agendamento:", error);
+    res.status(error.statusCode || 500).json({ message: error.message || "Erro interno ao atualizar agendamento." });
+  }
+}
 
-// Função para buscar horários disponíveis
-const getHorariosDisponiveis = async (req, res) => {
-    try {
-        const { data, profissional_id } = req.query;
-        if (!data || !profissional_id) {
-            return res.status(400).json({ error: 'Data e profissional_id são obrigatórios' });
-        }
+async function cancelAgendamento(req, res) {
+  try {
+    res.json(await agendamentoService.cancel(req.params.id, await getProfessionalId(req)));
+  } catch (error) {
+    console.error("Erro ao cancelar agendamento:", error);
+    res.status(error.statusCode || 500).json({ message: error.message || "Erro interno ao cancelar agendamento." });
+  }
+}
 
-        const horariosDisponiveis = await agendamentoService.getAvailableTimesByDate(data, profissional_id);
-        res.status(200).json(horariosDisponiveis);
-    } catch (error) {
-        console.error("Erro ao buscar horários disponíveis:", error);
-        res.status(500).json({ error: 'Erro interno ao buscar horários disponíveis' });
-    }
-};
-
-// Função para CANCELAR um agendamento
-const cancelAgendamento = async (req, res) => {
-    try {
-        const { id } = req.params;
-        const result = await agendamentoService.cancel(id);
-        res.status(200).json(result);
-    } catch (error) {
-        console.error("Erro no controller ao cancelar agendamento:", error);
-        res.status(error.statusCode || 500).json({ message: error.message || 'Erro interno ao cancelar agendamento' });
-    }
-};
-
-// Exporta as funções para serem usadas pelas rotas
-module.exports = {
-    getAgendamentos,
-    createAgendamento,
-    getHorariosDisponiveis,
-    cancelAgendamento
-};
+module.exports = { getAgendamentos, createAgendamento, getHorariosDisponiveis, updateAgendamento, cancelAgendamento };
