@@ -10,7 +10,7 @@ import { Typography, Box, Avatar } from "@mui/material";
         mb: 4,
       }}
     >
-      <Typography variant="h4">{title || "a"}</Typography>
+      <Typography variant="h4">{title || ""}</Typography>
       <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
         <Avatar sx={{ width: 32, height: 32 }}>D</Avatar>
         <Typography>Dra. Cris</Typography>

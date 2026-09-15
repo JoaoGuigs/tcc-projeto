@@ -1,0 +1,38 @@
+
+.titleContainer {
+  padding: 16px;
+}
+
+
+.linkWrapper,
+.linkWrapper:hover,
+.linkWrapper:visited {
+  text-decoration: none;
+  color: white; 
+}
+
+/* Estilo geral da lista */
+.list {
+  color: white; /* Cor do texto padrão para os itens */
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+
+/* Estilo para o ícone */
+.icon {
+  min-width: 40px;
+  color: white !important; /* Força a cor branca */
+}
+
+/* Garante cor branca em todos os estados */
+.listItem .icon,
+.listItem:hover .icon,
+.linkWrapper .Mui-selected .icon {
+   color: white !important;
+}
+
+/* Fundo quando selecionado */
+.linkWrapper .Mui-selected {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+}

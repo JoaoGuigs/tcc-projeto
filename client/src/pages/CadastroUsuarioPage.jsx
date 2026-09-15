@@ -2,14 +2,14 @@
 
 import React, { useState } from 'react';
 import axios from 'axios';
-import { Box, Typography, TextField, Button, Container, Alert } from '@mui/material';
+import { Box, Typography, TextField, Button, Container, Alert, Snackbar } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 
 // O endereço base da sua API
 const API_URL = 'http://localhost:3001';
 
 function CadastroUsuarioPage() {
-    // 1. Um único estado para guardar todos os dados do formulário
+    // Estado para guardar todos os dados do formulário
     const [formData, setFormData] = useState({
         nome: '',
         email: '',
@@ -19,10 +19,22 @@ function CadastroUsuarioPage() {
     });
 
     const [error, setError] = useState('');
-    const [success, setSuccess] = useState('');
     const navigate = useNavigate();
+    const [snackbar, setSnackbar] = useState({
+        open: false,
+        message: "",
+        severity: "success",
+    });
 
-    // 2. Uma função única para lidar com a mudança em qualquer campo de texto
+    const showSnackbar = (message, severity = "success") => {
+        setSnackbar({ open: true, message, severity });
+    };
+
+    const handleCloseSnackbar = () => {
+        setSnackbar({ ...snackbar, open: false });
+    };
+
+    // Função para lidar com a mudança em qualquer campo
     const handleChange = (event) => {
         const { name, value } = event.target;
         setFormData(prevState => ({
@@ -31,26 +43,25 @@ function CadastroUsuarioPage() {
         }));
     };
 
-    // 3. Função para enviar os dados para o backend ao submeter o formulário
+    // Função para enviar os dados para o backend
     const handleSubmit = async (event) => {
         event.preventDefault();
         setError('');
-        setSuccess('');
 
-        // Validação simples para ver se todos os campos estão preenchidos
+        // Validação simples
         if (!formData.nome || !formData.email || !formData.senha || !formData.registro_profissional || !formData.especialidade) {
             setError('Todos os campos são obrigatórios.');
             return;
         }
 
         try {
-            // A chamada para a rota que criamos no backend
+            // Chama a rota que cria um USUÁRIO + PROFISSIONAL
             await axios.post(`${API_URL}/usuarios/profissionais`, formData);
             
-            setSuccess('Profissional cadastrado com sucesso! Redirecionando para o login...');
+            showSnackbar('Profissional cadastrado com sucesso! Redirecionando para o login...', 'success');
             
-            // Limpa o formulário após o sucesso
             setFormData({ nome: '', email: '', senha: '', registro_profissional: '', especialidade: '' });
+            setError('');
 
             // Redireciona para a página de login após 2 segundos
             setTimeout(() => {
@@ -58,9 +69,8 @@ function CadastroUsuarioPage() {
             }, 2000);
 
         } catch (err) {
-            // Pega a mensagem de erro do backend, se houver, ou mostra uma genérica
             const errorMessage = err.response?.data?.error || 'Ocorreu um erro ao cadastrar.';
-            setError(errorMessage);
+            showSnackbar(errorMessage, 'error');
         }
     };
 
@@ -75,9 +85,10 @@ function CadastroUsuarioPage() {
                 }}
             >
                 <Typography component="h1" variant="h4">
-                    Cadastrar Novo Profissional
+                    Cadastrar Novo Profissional (Usuário)
                 </Typography>
                 <Box component="form" onSubmit={handleSubmit} sx={{ mt: 3 }}>
+                    {/* Campos para a tabela 'usuarios' */}
                     <TextField
                         name="nome"
                         label="Nome Completo"
@@ -89,7 +100,7 @@ function CadastroUsuarioPage() {
                     />
                     <TextField
                         name="email"
-                        label="Endereço de Email"
+                        label="Endereço de Email (Login)"
                         type="email"
                         value={formData.email}
                         onChange={handleChange}
@@ -107,6 +118,7 @@ function CadastroUsuarioPage() {
                         required
                         margin="normal"
                     />
+                    {/* Campos para a tabela 'profissionais' */}
                     <TextField
                         name="registro_profissional"
                         label="Registro Profissional (Ex: CREFITO)"
@@ -127,7 +139,6 @@ function CadastroUsuarioPage() {
                     />
 
                     {error && <Alert severity="error" sx={{ mt: 2, width: '100%' }}>{error}</Alert>}
-                    {success && <Alert severity="success" sx={{ mt: 2, width: '100%' }}>{success}</Alert>}
 
                     <Button
                         type="submit"
@@ -139,6 +150,21 @@ function CadastroUsuarioPage() {
                     </Button>
                 </Box>
             </Box>
+
+            <Snackbar
+                open={snackbar.open}
+                autoHideDuration={4000}
+                onClose={handleCloseSnackbar}
+                anchorOrigin={{ vertical: "top", horizontal: "right" }}
+            >
+                <Alert
+                    onClose={handleCloseSnackbar}
+                    severity={snackbar.severity}
+                    sx={{ width: "100%" }}
+                >
+                    {snackbar.message}
+                </Alert>
+            </Snackbar>
         </Container>
     );
 }

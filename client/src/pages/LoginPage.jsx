@@ -7,6 +7,9 @@ import {
   TextField,
   Button,
   Avatar,
+  Snackbar,
+  Alert,
+  Link,
 } from "@mui/material";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 import { useNavigate } from "react-router-dom";
@@ -15,10 +18,27 @@ function LoginPage() {
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const navigate = useNavigate();
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: "",
+    severity: "success",
+  });
+
+  const showSnackbar = (message, severity = "success") => {
+    setSnackbar({ open: true, message, severity });
+  };
+
+  const handleCloseSnackbar = () => {
+    setSnackbar({ ...snackbar, open: false });
+  };
 
   const handleLogin = async (event) => {
     event.preventDefault();
-    console.log("Tentando fazer login com:", { email, senha });
+
+    if (!email || !senha) {
+      showSnackbar("Por favor, preencha todos os campos.", "warning");
+      return;
+    }
 
     try {
       const response = await axios.post(
@@ -28,10 +48,14 @@ function LoginPage() {
           senha: senha,
         }
       );
-      navigate("/home");
+      showSnackbar("Login realizado com sucesso!", "success");
+      setTimeout(() => {
+        navigate("/home");
+      }, 1000);
       console.log("Resposta do servidor:", response.data);
     } catch (error) {
       console.error("Erro ao fazer login:", error);
+      showSnackbar(error.response?.data?.error || "Credenciais inválidas. Tente novamente.", "error");
     }
   };
   return (
@@ -121,9 +145,50 @@ function LoginPage() {
             >
               Entrar
             </Button>
+
+            <Box sx={{ textAlign: "center", mt: 2 }}>
+              <Typography variant="body2" color="text.secondary">
+                Não tem uma conta?{" "}
+                <Link
+                  component="button"
+                  type="button"
+                  variant="body2"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate("/cadastro");
+                  }}
+                  sx={{
+                    cursor: "pointer",
+                    color: "#202938",
+                    fontWeight: 600,
+                    textDecoration: "none",
+                    "&:hover": {
+                      textDecoration: "underline",
+                    },
+                  }}
+                >
+                  Cadastre-se aqui
+                </Link>
+              </Typography>
+            </Box>
           </Box>
         </Box>
       </Container>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={4000}
+        onClose={handleCloseSnackbar}
+        anchorOrigin={{ vertical: "top", horizontal: "right" }}
+      >
+        <Alert
+          onClose={handleCloseSnackbar}
+          severity={snackbar.severity}
+          sx={{ width: "100%" }}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 }

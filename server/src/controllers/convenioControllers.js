@@ -20,7 +20,22 @@ const createConvenio = async (req, res) => {
     }
 };
 
+const deleteConvenio = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await convenioService.deleteById(id);
+        res.status(200).json({ message: "Convênio deletado com sucesso" });
+    } catch (err) {
+        if (err.message.includes('referenciado')) {
+            res.status(400).json({ error: err.message });
+        } else {
+            res.status(500).json({ error: "Erro ao deletar convênio" });
+        }
+    }
+};
+
 module.exports = {
     getAllConvenios,
-    createConvenio
+    createConvenio,
+    deleteConvenio
 };
