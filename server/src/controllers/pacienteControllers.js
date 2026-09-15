@@ -19,7 +19,7 @@ const createPaciente = async (req, res) => {
       .json({ message: "Paciente cadastrado", id: novoPaciente.id });
   } catch (err) {
     console.error("Erro no controoler ao cadastrar paciente", err);
-    res.status(500).json({ message: "Erro interno ao cadastrar paciente" });
+    res.status(err.statusCode || 500).json({ message: err.statusCode ? err.message : "Erro interno ao cadastrar paciente" });
   }
 };
 
@@ -27,7 +27,7 @@ const getAllPacientes = async (req, res) => {
   try {
     const nomeQuery = req.query.nome; // 1. Pega o parâmetro 'nome' da URL (?nome=...)
     // Evitar buscas muito curtas: exige pelo menos 4 caracteres
-    if (nomeQuery && nomeQuery.trim().length < 4) {
+    if (nomeQuery && nomeQuery.trim().length < 3) {
         return res.status(200).json([]);
     }
     const pacientes = await pacienteService.getAll(nomeQuery); // 2. Passa para o service

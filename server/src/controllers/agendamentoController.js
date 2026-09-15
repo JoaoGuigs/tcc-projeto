@@ -4,7 +4,7 @@ const agendamentoService = require('../services/agendamentoService.js');
 // Função para BUSCAR agendamentos
 const getAgendamentos = async (req, res) => {
     try {
-        const { pacienteId, dataInicio, dataFim, semAtendimento } = req.query;
+        const { pacienteId, dataInicio, dataFim, semAtendimento, limite } = req.query;
         const onlyPending = semAtendimento === 'true' || semAtendimento === '1';
         
         // Validar data inicial se fornecida
@@ -25,7 +25,8 @@ const getAgendamentos = async (req, res) => {
             dataInicio, 
             dataFim, 
             pacienteId,
-            onlyPending
+            onlyPending,
+            limite
         );
         res.status(200).json(agendamentos);
     } catch (error) {
@@ -44,7 +45,7 @@ const createAgendamento = async (req, res) => {
     } catch (error) {
         console.error("Erro no controller ao criar agendamento:", error);
         // Retorna a mensagem de erro específica do service, se houver
-        res.status(500).json({ error: error.message || 'Erro interno ao criar agendamento' });
+        res.status(error.statusCode || 500).json({ message: error.message || 'Erro interno ao criar agendamento' });
     }
 };
 
@@ -72,7 +73,7 @@ const cancelAgendamento = async (req, res) => {
         res.status(200).json(result);
     } catch (error) {
         console.error("Erro no controller ao cancelar agendamento:", error);
-        res.status(500).json({ error: error.message || 'Erro interno ao cancelar agendamento' });
+        res.status(error.statusCode || 500).json({ message: error.message || 'Erro interno ao cancelar agendamento' });
     }
 };
 

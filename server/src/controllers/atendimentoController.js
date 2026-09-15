@@ -32,7 +32,7 @@ const createAtendimento = async (req, res) => {
         res.status(201).json({ message: 'Atendimento registrado com sucesso', id: novoAtendimento.id });
     } catch (error) {
         console.error("Erro no controller ao criar atendimento:", error);
-        res.status(500).json({ error: error.message || 'Erro interno ao criar atendimento' });
+        res.status(error.statusCode || 500).json({ message: error.message || 'Erro interno ao criar atendimento' });
     }
 };
 

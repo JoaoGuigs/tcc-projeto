@@ -1,85 +1,50 @@
 const db = require("../../database");
 
-const create = async (pacienteData) => {
-  const {
-    nome_completo,
-    celular,
-    convenio_id,
-    numero_carteirinha,
-    descricao_problema,
-    profissao,
-  } = pacienteData;
-  // Verificar se celular foi informado
-  if (!celular || String(celular).trim() === '') {
-    throw new Error('Celular é obrigatório para cadastro de paciente.');
+async function create({ nome_completo, celular, convenio_id, numero_carteirinha, descricao_problema, profissao }) {
+  const normalizedPhone = String(celular).replace(/\D/g, "");
+  if (!/^\d{10,11}$/.test(normalizedPhone)) {
+    const error = new Error("Número de celular inválido. Informe DDD e número.");
+    error.statusCode = 400;
+    throw error;
   }
-
-  // Normalizar celular (apenas dígitos)
-  const celularNormalized = String(celular).replace(/\D/g, '');
-
-  // Validar tamanho (10 ou 11 dígitos é comum no BR)
-  if (!(celularNormalized.length === 10 || celularNormalized.length === 11)) {
-    throw new Error('Número de celular inválido. Informe DDD + número (10 ou 11 dígitos).');
-  }
-
-  // Checar existência usando o valor normalizado
-  const [existing] = await db.query('SELECT id FROM pacientes WHERE celular = ?', [celularNormalized]);
-  if (existing.length > 0) {
-    throw new Error('Já existe um paciente cadastrado com este celular.');
-  }
-  const sql =
-    "INSERT INTO pacientes (nome_completo, celular, convenio_id, numero_carteirinha, descricao_problema, profissao) VALUES (?, ?, ?, ?, ?, ?)";
-  const [result] = await db.query(sql, [
-    nome_completo,
-    celularNormalized,
-    convenio_id,
-    numero_carteirinha,
-    descricao_problema,
-    profissao || null,
-  ]);
-  return { id: result.insertId };
-};
-const getAll = async (nomeQuery) => { // 1. Recebe o nome como parâmetro
-    let sql = "SELECT id, nome_completo FROM pacientes"; // 2. Pega só id e nome
-    const params = [];
-
-    if (nomeQuery) { // 3. Se um nome foi enviado...
-        sql += " WHERE nome_completo LIKE ?"; // ...adiciona o filtro LIKE
-        params.push(`%${nomeQuery}%`); // ...e o parâmetro (com % para busca parcial)
+  try {
+    const [result] = await db.query(
+      `INSERT INTO pacientes
+       (nome_completo, celular, convenio_id, numero_carteirinha, descricao_problema, profissao)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [nome_completo, normalizedPhone, convenio_id || null, numero_carteirinha || null, descricao_problema || null, profissao || null],
+    );
+    return { id: result.insertId };
+  } catch (error) {
+    if (error.code === "ER_DUP_ENTRY") {
+      const conflict = new Error("Já existe um paciente cadastrado com este celular.");
+      conflict.statusCode = 409;
+      throw conflict;
     }
-    sql += " ORDER BY nome_completo LIMIT 10"; // 4. Limita a 10 resultados
-
-    const [pacientes] = await db.query(sql, params);
-    return pacientes;
-};
-const getById = async (id) => {
-    // Query que busca dados do paciente e faz JOIN com convenios
-    const sql = `
-        SELECT 
-            p.id, 
-            p.nome_completo, 
-            p.celular, 
-            p.convenio_id, 
-            p.numero_carteirinha, 
-            p.descricao_problema,
-            p.profissao, -- Incluímos a profissao
-            c.nome_convenio -- Pegamos o nome do convênio da tabela convenios
-        FROM 
-            pacientes AS p 
-        LEFT JOIN 
-            convenios AS c ON p.convenio_id = c.id 
-        WHERE 
-            p.id = ?;
-    `;
-    
-    // Executa a query passando o ID recebido
-    const [pacientes] = await db.query(sql, [id]);
-
-    // Retorna o primeiro (e único) paciente encontrado, ou null se não encontrar
-    return pacientes.length > 0 ? pacientes[0] : null; 
-};
-
-
-module.exports = {
-    create, getAll, getById
+    throw error;
+  }
 }
+
+async function getAll(nomeQuery) {
+  const params = [];
+  let sql = "SELECT id, nome_completo FROM pacientes";
+  if (nomeQuery) {
+    sql += " WHERE nome_completo LIKE ?";
+    params.push(`${nomeQuery}%`);
+  }
+  sql += " ORDER BY nome_completo LIMIT 10";
+  const [rows] = await db.query(sql, params);
+  return rows;
+}
+
+async function getById(id) {
+  const [rows] = await db.query(
+    `SELECT p.id, p.nome_completo, p.celular, p.convenio_id, p.numero_carteirinha,
+       p.descricao_problema, p.profissao, c.nome_convenio
+     FROM pacientes p LEFT JOIN convenios c ON p.convenio_id = c.id WHERE p.id = ? LIMIT 1`,
+    [id],
+  );
+  return rows[0] || null;
+}
+
+module.exports = { create, getAll, getById };
