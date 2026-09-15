@@ -1,0 +1,32 @@
+@import url("https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500;600;700&display=swap");
+@import "tailwindcss";
+
+@theme {
+  /* Fonte padrão do projeto */
+  --font-display: "Source Sans 3", system-ui, sans-serif;
+  --font-sans: "Source Sans 3", system-ui, sans-serif;
+  /* Tamanho mínimo mais confortável para leitura em todas as telas */
+  --text-xs: 0.8125rem;
+  --text-xs--line-height: 1.125rem;
+  /* Tokens do Paper — nomes usados no export */
+  --color-primary: #2f6f68;
+  --color-primary-soft: #d9e8e4;
+  --color-surface: #ffffff;
+  --color-border: #e6e2da;
+  --color-ink: #1f2a24;
+  --color-muted: #66736c;
+  --color-canvas: #f7f5f1;
+  --color-success-soft: #dcebe4;
+  --color-warning-soft: #f3e8cf;
+  --color-done-soft: #e8eee9;
+  --color-arrived-soft: #e8e1f3;
+  --color-segment: #ece9e3;
+  --color-table-head: #fbfaf7;
+  /* Aliases usados no restante do app */
+  --color-brand: #2f6f68;
+  --color-brand-soft: #d9e8e4;
+  --color-line: #e6e2da;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; background: #f7f5f1; color: #1f2a24; font-family: "Source Sans 3", system-ui, sans-serif; }

@@ -5,6 +5,7 @@
 
 const pacienteService = require("./pacienteService.js");
 const agendamentoService = require("./agendamentoService.js");
+const config = require("../config.js");
 
 /**
  * @typedef {Object} ResultadoBooking
@@ -51,7 +52,7 @@ async function criarAgendamento(dados) {
   try {
     await agendamentoService.create({
       paciente_id: pacienteEncontrado.id,
-      profissional_id: 1,
+      profissional_id: config.WHATSAPP_PROFESSIONAL_ID,
       data_hora: dataHoraISO,
       tipo_consulta: "Consulta Padrão",
       observacoes: "Agendado via WhatsApp",
@@ -67,7 +68,7 @@ async function criarAgendamento(dados) {
     };
   } catch (erro) {
     if (erro.message.includes("Horário já está ocupado")) {
-      const horariosDisponiveis = await agendamentoService.getAvailableTimesByDate(data, 1);
+      const horariosDisponiveis = await agendamentoService.getAvailableTimesByDate(data, config.WHATSAPP_PROFESSIONAL_ID);
       const horarios = horariosDisponiveis.slice(0, 5).join(", ");
       return {
         sucesso: false,

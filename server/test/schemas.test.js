@@ -16,3 +16,14 @@ test("rejeita atendimento vazio", () => {
   const result = schemas.attendance.safeParse({ agendamento_id: 1, evolucao_clinica: "", procedimentos_realizados: "" });
   assert.equal(result.success, false);
 });
+
+test("valida envio de template oficial do WhatsApp", () => {
+  const result = schemas.whatsappTemplateSend.parse({
+    numero: "5548999999999",
+    nome_template: "lembrete_consulta",
+    parametros: ["Maria", "16/09", "08:00"],
+  });
+  assert.equal(result.idioma, "pt_BR");
+  assert.equal(result.parametros.length, 3);
+  assert.equal(schemas.whatsappTemplateSend.safeParse({ ...result, nome_template: "Nome Inválido" }).success, false);
+});

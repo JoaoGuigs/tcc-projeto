@@ -15,7 +15,12 @@ app.disable("x-powered-by");
 app.use(pinoHttp({ redact: ["req.headers.authorization", "req.headers.cookie", "req.body.senha"] }));
 app.use(helmet());
 app.use(cors({ origin: config.CLIENT_ORIGIN.split(",").map((item) => item.trim()), credentials: true }));
-app.use(express.json({ limit: "256kb" }));
+app.use(express.json({
+  limit: "256kb",
+  verify: (req, _res, buffer) => {
+    if (req.originalUrl?.startsWith("/webhook/")) req.rawBody = Buffer.from(buffer);
+  },
+}));
 app.use(cookieParser());
 
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, standardHeaders: "draft-8", legacyHeaders: false });
@@ -23,9 +28,11 @@ app.use("/usuarios/login", authLimiter);
 
 app.use("/usuarios", require("./src/routes/usuario"));
 app.use("/webhook", require("./src/routes/whatsapp"));
+app.use("/whatsapp", requireAuth, require("./src/routes/whatsappAdmin"));
 app.use("/pacientes", requireAuth, require("./src/routes/paciente"));
 app.use("/convenios", requireAuth, require("./src/routes/convenio"));
 app.use("/agendamentos", requireAuth, require("./src/routes/agendamentos"));
+app.use("/lista-espera", requireAuth, require("./src/routes/waitlist"));
 app.use("/atendimentos", requireAuth, require("./src/routes/atendimentos"));
 app.use("/configuracoes", requireAuth, require("./src/routes/configuracoes"));
 

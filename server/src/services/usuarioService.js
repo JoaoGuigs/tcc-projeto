@@ -27,7 +27,11 @@ async function createProfissional({ nome, email, senha, registro_profissional, e
 
 async function login({ email, senha }) {
   const [users] = await db.query(
-    "SELECT id, nome, email, senha_hash FROM usuarios WHERE email = ? LIMIT 1",
+    `SELECT u.id, u.nome, u.email, u.senha_hash, p.id AS profissional_id,
+       p.registro_profissional, p.especialidade
+     FROM usuarios u
+     LEFT JOIN profissionais p ON p.usuario_id = u.id
+     WHERE u.email = ? LIMIT 1`,
     [email],
   );
   const user = users[0];
@@ -37,7 +41,24 @@ async function login({ email, senha }) {
     error.statusCode = 401;
     throw error;
   }
-  return { id: user.id, nome: user.nome, email: user.email };
+  return {
+    id: user.id, nome: user.nome, email: user.email,
+    profissional_id: user.profissional_id,
+    registro_profissional: user.registro_profissional,
+    especialidade: user.especialidade,
+  };
 }
 
-module.exports = { createProfissional, login };
+async function getPublicUserById(id) {
+  const [rows] = await db.query(
+    `SELECT u.id, u.nome, u.email, p.id AS profissional_id,
+       p.registro_profissional, p.especialidade
+     FROM usuarios u
+     LEFT JOIN profissionais p ON p.usuario_id = u.id
+     WHERE u.id = ? LIMIT 1`,
+    [id],
+  );
+  return rows[0] || null;
+}
+
+module.exports = { createProfissional, login, getPublicUserById };

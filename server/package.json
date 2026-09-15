@@ -6,7 +6,9 @@
     "start": "node index.js",
     "dev": "nodemon index.js",
     "test": "node --test --test-concurrency=1 --test-force-exit",
-    "db:migrate": "node scripts/migrate.js"
+    "db:migrate": "node scripts/migrate.js",
+    "db:seed": "node scripts/seed-demo.js",
+    "db:check-demo": "node scripts/check-demo-login.js"
   },
   "keywords": [],
   "author": "",

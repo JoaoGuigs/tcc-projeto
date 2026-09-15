@@ -27,12 +27,14 @@ async function create({ nome_completo, celular, convenio_id, numero_carteirinha,
 
 async function getAll(nomeQuery) {
   const params = [];
-  let sql = "SELECT id, nome_completo FROM pacientes";
+  let sql = `SELECT p.id, p.nome_completo, p.celular, p.convenio_id, p.numero_carteirinha,
+    p.descricao_problema, p.profissao, c.nome_convenio
+    FROM pacientes p LEFT JOIN convenios c ON c.id = p.convenio_id`;
   if (nomeQuery) {
-    sql += " WHERE nome_completo LIKE ?";
+    sql += " WHERE p.nome_completo LIKE ?";
     params.push(`${nomeQuery}%`);
   }
-  sql += " ORDER BY nome_completo LIMIT 10";
+  sql += nomeQuery ? " ORDER BY p.nome_completo LIMIT 10" : " ORDER BY p.nome_completo LIMIT 500";
   const [rows] = await db.query(sql, params);
   return rows;
 }

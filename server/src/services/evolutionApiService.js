@@ -11,4 +11,26 @@ async function enviarMensagem(numero, texto) {
   return response.json();
 }
 
-module.exports = { enviarMensagem };
+async function obterStatus() {
+  const configurado = Boolean(config.EVOLUTION_API_KEY && config.EVOLUTION_INSTANCE);
+  const status = {
+    configurado,
+    provedor: "evolution",
+    provedor_nome: "Evolution API",
+    identificador: config.EVOLUTION_INSTANCE || null,
+    conexao: configurado ? "unknown" : "nao_configurado",
+  };
+  if (!configurado) return status;
+  try {
+    const response = await fetch(
+      `${config.EVOLUTION_API_URL}/instance/connectionState/${encodeURIComponent(config.EVOLUTION_INSTANCE)}`,
+      { headers: { apikey: config.EVOLUTION_API_KEY }, signal: AbortSignal.timeout(4_000) },
+    );
+    const data = await response.json().catch(() => ({}));
+    return { ...status, conexao: data?.instance?.state || data?.state || (response.ok ? "unknown" : "indisponivel") };
+  } catch {
+    return { ...status, conexao: "indisponivel" };
+  }
+}
+
+module.exports = { enviarMensagem, obterStatus };

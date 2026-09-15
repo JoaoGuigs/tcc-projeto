@@ -38,6 +38,23 @@ module.exports = {
     tipo_consulta: z.string().trim().max(120).default("Consulta Padrão"),
     observacoes: optionalText, status: z.enum(["Agendado", "Confirmado"]).default("Agendado"),
   }),
+  appointmentUpdate: z.object({
+    data_hora: dateTime.optional(),
+    tipo_consulta: z.string().trim().min(2).max(120).optional(),
+    observacoes: optionalText,
+    status: z.enum(["Agendado", "Confirmado", "Chegou", "Faltou"]).optional(),
+  }).refine((value) => Object.values(value).some((item) => item !== undefined), {
+    message: "Informe ao menos uma alteração",
+  }),
+  waitlist: z.object({
+    paciente_id: id,
+    data_preferida: date.optional().nullable(),
+    periodo: z.enum(["Qualquer horário", "Manhã", "Tarde"]).default("Qualquer horário"),
+    observacoes: z.string().trim().max(500).optional().nullable(),
+  }),
+  waitlistUpdate: z.object({
+    status: z.enum(["Aguardando", "Contatado", "Agendado", "Removido"]),
+  }),
   attendance: z.object({
     agendamento_id: id,
     evolucao_clinica: optionalText,
@@ -51,4 +68,17 @@ module.exports = {
     telefone: z.string().trim().max(20), email: z.string().trim().email(),
   }),
   message: z.object({ titulo: z.string().trim().min(2).max(150), mensagem: z.string().trim().min(2).max(2000) }),
+  whatsappSend: z.object({
+    numero: z.string().trim().regex(/^\d{10,15}$/, "Informe DDI, DDD e número (somente dígitos)"),
+    texto: z.string().trim().min(1).max(2000),
+  }),
+  whatsappTemplateSend: z.object({
+    numero: z.string().trim().regex(/^\d{10,15}$/, "Informe DDI, DDD e número (somente dígitos)"),
+    nome_template: z.string().trim().regex(/^[a-z0-9_]{1,512}$/, "Nome de template inválido"),
+    idioma: z.string().trim().regex(/^[a-z]{2,3}_[A-Z]{2}$/).default("pt_BR"),
+    parametros: z.array(z.string().trim().max(1024)).max(20).default([]),
+  }),
+  whatsappNumeroParams: z.object({
+    numero: z.string().trim().regex(/^\d{10,15}$/, "Número inválido"),
+  }),
 };
