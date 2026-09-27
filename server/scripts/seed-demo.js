@@ -2,6 +2,7 @@ require("dotenv").config();
 
 const bcrypt = require("bcryptjs");
 const db = require("../../server/database");
+const config = require("../src/config");
 
 function mysqlDate(dayOffset, hour, minute = 0) {
   const date = new Date();
@@ -35,29 +36,58 @@ async function ensureProfessional(connection) {
 }
 
 async function ensurePatient(connection, patient) {
-  await connection.query(
-    "INSERT INTO pacientes (nome_completo, celular, descricao_problema, profissao) "
-      + "VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE nome_completo = VALUES(nome_completo), "
-      + "descricao_problema = VALUES(descricao_problema), profissao = VALUES(profissao)",
-    [patient.nome, patient.celular, patient.problema, patient.profissao],
+  const [existing] = await connection.query("SELECT id FROM pacientes WHERE celular = ? LIMIT 1", [patient.celular]);
+  if (existing[0]) return existing[0].id;
+  const [result] = await connection.query(
+    "INSERT INTO pacientes (nome_completo, celular, convenio_id, descricao_problema, profissao) VALUES (?, ?, ?, ?, ?)",
+    [patient.nome, patient.celular, patient.convenioId || null, patient.problema, patient.profissao],
   );
-  const [rows] = await connection.query("SELECT id FROM pacientes WHERE celular = ? LIMIT 1", [patient.celular]);
-  return rows[0].id;
+  return result.insertId;
+}
+
+async function ensureConvenio(connection, name) {
+  const [existing] = await connection.query("SELECT id FROM convenios WHERE nome_convenio = ? LIMIT 1", [name]);
+  if (existing[0]) return existing[0].id;
+  const [result] = await connection.query("INSERT INTO convenios (nome_convenio) VALUES (?)", [name]);
+  return result.insertId;
 }
 
 async function ensureAppointment(connection, appointment) {
+  const [existing] = await connection.query(
+    "SELECT id FROM agendamentos WHERE paciente_id = ? AND profissional_id = ? AND data_hora = ? AND status <> 'Cancelado' LIMIT 1",
+    [appointment.pacienteId, appointment.profissionalId, appointment.dataHora],
+  );
+  if (existing[0]) return existing[0].id;
   await connection.query(
     "INSERT IGNORE INTO agendamentos "
       + "(paciente_id, profissional_id, data_hora, tipo_consulta, observacoes, status) "
-      + "VALUES (?, ?, ?, ?, 'Dado de demonstração', ?)",
-    [appointment.pacienteId, appointment.profissionalId, appointment.dataHora, appointment.tipo, appointment.status],
+      + "VALUES (?, ?, ?, ?, ?, ?)",
+    [appointment.pacienteId, appointment.profissionalId, appointment.dataHora, appointment.tipo,
+      appointment.observacoes || "Sessão de acompanhamento.", appointment.status],
   );
   const [rows] = await connection.query(
-    "SELECT id FROM agendamentos WHERE profissional_id = ? AND data_hora = ? "
+    "SELECT id FROM agendamentos WHERE paciente_id = ? AND profissional_id = ? AND data_hora = ? "
       + "AND status <> 'Cancelado' LIMIT 1",
-    [appointment.profissionalId, appointment.dataHora],
+    [appointment.pacienteId, appointment.profissionalId, appointment.dataHora],
   );
   return rows[0]?.id;
+}
+
+async function ensureAttendance(connection, appointmentId, date, evolution, procedures) {
+  if (!appointmentId) return;
+  const [existing] = await connection.query("SELECT id FROM atendimentos WHERE agendamento_id = ? LIMIT 1", [appointmentId]);
+  if (existing[0]) return;
+  await connection.query(
+    "INSERT IGNORE INTO atendimentos (agendamento_id, data_atendimento, evolucao_clinica, procedimentos_realizados) VALUES (?, ?, ?, ?)",
+    [appointmentId, date, evolution, procedures],
+  );
+  await connection.query("UPDATE agendamentos SET status = 'Concluído' WHERE id = ? AND status <> 'Cancelado'", [appointmentId]);
+}
+
+function assertLocalDemoTarget() {
+  if (config.NODE_ENV !== "development" || config.DB_HOST !== "localhost" || config.DB_NAME !== "tcc-projeto") {
+    throw new Error("O seed de demonstração só pode ser executado no banco local tcc-projeto em development.");
+  }
 }
 
 async function ensureWaitlist(connection, patientId, professionalId, preferredDate, period, notes) {
@@ -73,11 +103,32 @@ async function ensureWaitlist(connection, patientId, professionalId, preferredDa
   return result.insertId;
 }
 
+function previousWeekdayOffset(index) {
+  let offset = -1;
+  let weekdays = 0;
+  while (weekdays < index) {
+    const date = new Date();
+    date.setDate(date.getDate() + offset);
+    if (date.getDay() !== 0 && date.getDay() !== 6) weekdays += 1;
+    if (weekdays < index) offset -= 1;
+  }
+  return offset;
+}
+
+function isWeekdayOffset(offset) {
+  const date = new Date();
+  date.setDate(date.getDate() + offset);
+  return date.getDay() !== 0 && date.getDay() !== 6;
+}
+
 async function main() {
+  assertLocalDemoTarget();
   const connection = await db.getConnection();
   try {
     await connection.beginTransaction();
     const professional = await ensureProfessional(connection);
+    const [professionalRows] = await connection.query("SELECT id FROM profissionais ORDER BY id");
+    const scheduleProfessionalIds = professionalRows.map((row) => row.id);
     const patients = [
       { nome: "Maria Oliveira", celular: "48999123344", problema: "Dor e limitação na coluna cervical", profissao: "Professora" },
       { nome: "João Pereira", celular: "48988772211", problema: "Dor no joelho após atividade física", profissao: "Contador" },
@@ -128,6 +179,106 @@ async function main() {
       );
     }
 
+    const convenioNames = ["Unimed", "Bradesco Saude", "SulAmerica"];
+    const convenios = [];
+    for (const name of convenioNames) convenios.push(await ensureConvenio(connection, name));
+    const firstNames = ["Helena", "Marcos", "Sofia", "Rafael", "Isabela", "Eduardo", "Camila", "Pedro", "Laura", "Gustavo"];
+    const lastNames = ["Martins", "Ribeiro", "Costa", "Almeida"];
+    const professions = ["Professora", "Analista", "Comerciante", "Enfermeiro", "Designer", "Aposentado", "Advogada", "Estudante"];
+    const complaints = [
+      "Reabilitacao de dor lombar e melhora da mobilidade.",
+      "Fortalecimento apos lesao no joelho.",
+      "Tratamento de tensao cervical e correcao postural.",
+      "Recuperacao funcional do ombro.",
+      "Acompanhamento de equilibrio e marcha.",
+      "Reabilitacao apos entorse no tornozelo.",
+      "Reducao de dor e ganho de amplitude de movimento.",
+      "Condicionamento e prevencao de novas lesoes.",
+    ];
+    const demoPatients = [];
+    for (let index = 0; index < 40; index += 1) {
+      const name = `${firstNames[index % firstNames.length]} ${lastNames[Math.floor(index / firstNames.length)]}`;
+      const phone = `0099${String(index + 1).padStart(7, "0")}`;
+      const convenioId = index % 4 === 0 ? null : convenios[index % convenios.length];
+      const id = await ensurePatient(connection, {
+        nome: name,
+        celular: phone,
+        convenioId,
+        problema: complaints[index % complaints.length],
+        profissao: professions[index % professions.length],
+      });
+      demoPatients.push({ id, nome: name, celular: phone });
+    }
+
+    const sessionTypes = ["Fisioterapia ortopedica", "Pilates clinico", "Terapia manual", "Reavaliacao funcional"];
+    const scheduleTimes = [[8, 30], [10, 0], [12, 0], [14, 0], [15, 30], [16, 30]];
+    for (const scheduleProfessionalId of scheduleProfessionalIds) {
+      for (let offset = -35; offset <= 28; offset += 1) {
+        if (!isWeekdayOffset(offset) && offset !== 0) continue;
+        const slots = offset === 0 ? scheduleTimes.slice(0, 5) : scheduleTimes.slice(0, 3);
+        for (let slotIndex = 0; slotIndex < slots.length; slotIndex += 1) {
+          const patient = demoPatients[Math.abs(offset * 3 + slotIndex) % demoPatients.length];
+          const [hour, minute] = slots[slotIndex];
+          const isPast = offset < 0;
+          const status = isPast
+            ? (Math.abs(offset + slotIndex) % 7 === 0 ? "Faltou" : "Concluido")
+            : ((offset + slotIndex) % 3 === 0 ? "Confirmado" : "Agendado");
+          const appointmentId = await ensureAppointment(connection, {
+            pacienteId: patient.id,
+            profissionalId: scheduleProfessionalId,
+            dataHora: mysqlDate(offset, hour, minute),
+            tipo: sessionTypes[Math.abs(offset + slotIndex) % sessionTypes.length],
+            status,
+            observacoes: "Registro demonstrativo para popular a agenda.",
+          });
+          if (isPast && status === "Concluido") {
+            await ensureAttendance(connection, appointmentId, mysqlDate(offset, hour, minute),
+              "Evolucao estavel, com boa resposta aos exercicios e orientacoes passadas.",
+              "Exercicios terapeuticos, mobilidade e terapia manual.");
+          }
+        }
+      }
+
+      // Perfil demonstrativo com dez sessoes anteriores para validar o historico clinico.
+      const historyPatient = demoPatients[0];
+      for (let visit = 1; visit <= 10; visit += 1) {
+        const offset = previousWeekdayOffset(visit);
+        const appointmentId = await ensureAppointment(connection, {
+          pacienteId: historyPatient.id,
+          profissionalId: scheduleProfessionalId,
+          dataHora: mysqlDate(offset, 17, 30),
+          tipo: sessionTypes[visit % sessionTypes.length],
+          status: "Concluido",
+          observacoes: "Sessao de acompanhamento demonstrativa.",
+        });
+        await ensureAttendance(connection, appointmentId, mysqlDate(offset, 17, 30),
+          `Sessao ${visit}: evolucao favoravel e plano terapeutico mantido.`,
+          "Exercicios funcionais, mobilidade e orientacoes domiciliares.");
+      }
+
+      for (let index = 0; index < 8; index += 1) {
+        const patient = demoPatients[index + 8];
+        await ensureWaitlist(connection, patient.id, scheduleProfessionalId,
+          mysqlDate(index % 3, 9).slice(0, 10), ["Manha", "Tarde", "Qualquer horario"][index % 3],
+          "Paciente demonstrativo; aceita contato para antecipar o atendimento.");
+      }
+    }
+
+    // Somente mensagens recebidas em numeros ficticios (DDD 00), nunca numeros reais de contato.
+    for (let index = 0; index < 8; index += 1) {
+      const patient = demoPatients[index];
+      for (let messageIndex = 0; messageIndex < 2; messageIndex += 1) {
+        const text = messageIndex === 0
+          ? "Ola, gostaria de confirmar meu proximo horario."
+          : "Consigo ajustar meu atendimento para outro periodo?";
+        await connection.query(
+          "INSERT IGNORE INTO whatsapp_mensagens (numero, direcao, texto, status, message_id, lida) "
+            + "VALUES (?, 'entrada', ?, 'recebida', ?, ?)",
+          [patient.celular, text, `demo-seed-${index + 1}-${messageIndex + 1}`, messageIndex],
+        );
+      }
+    }
+
     const messages = [
       ["48999123344", "entrada", "Oi, confirmo minha consulta de hoje.", "demo-in-1", 0],
       ["48999123344", "saida", "Consulta confirmada. Até breve!", "demo-out-1", 1],
@@ -150,8 +301,17 @@ async function main() {
       : false;
     if (!credentialsAreValid) throw new Error("As credenciais de demonstração não foram gravadas corretamente.");
 
+    const [totals] = await connection.query(
+      "SELECT (SELECT COUNT(*) FROM pacientes) AS pacientes, "
+        + "(SELECT COUNT(*) FROM agendamentos) AS agendamentos, "
+        + "(SELECT COUNT(*) FROM atendimentos) AS atendimentos, "
+        + "(SELECT COUNT(*) FROM lista_espera) AS lista_espera, "
+        + "(SELECT COUNT(*) FROM whatsapp_mensagens) AS mensagens",
+    );
+
     await connection.commit();
     console.log("Dados de demonstração carregados com sucesso.");
+    console.log("Registros no banco local: " + JSON.stringify(totals[0]));
     console.log("Login de demonstração: ana@fisiocare.demo");
     console.log("Senha de demonstração: " + professional.password);
   } catch (error) {

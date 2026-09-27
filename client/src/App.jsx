@@ -22,6 +22,9 @@ const FinanceiroPage = lazy(() => import("./pages/FinanceiroPage"));
 const theme = createTheme({
   typography: { fontFamily: ['"Source Sans 3"', "system-ui", "sans-serif"].join(",") },
   shape: { borderRadius: 16 },
+  palette: {
+    primary: { main: "#2f6f68", dark: "#245a54", light: "#d9e8e4", contrastText: "#ffffff" },
+  },
 });
 
 const Loading = () => <Box sx={{ minHeight: "100vh", display: "grid", placeItems: "center" }}><CircularProgress /></Box>;

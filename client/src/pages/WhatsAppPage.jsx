@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useOutletContext } from "react-router-dom";
+import { Info } from "lucide-react";
 import dayjs from "dayjs";
 import "dayjs/locale/pt-br";
 import { useQuery } from "@tanstack/react-query";
@@ -15,15 +16,6 @@ import {
 import { formatPhone, onlyDigits } from "../utils/phone";
 
 dayjs.locale("pt-br");
-
-const CONNECTION = {
-  open: { label: "Conectado", dot: "bg-primary" },
-  connecting: { label: "Conectando", dot: "bg-[#8C6A28]" },
-  close: { label: "Desconectado", dot: "bg-[#C62828]" },
-  unknown: { label: "Conexão indefinida", dot: "bg-muted" },
-  indisponivel: { label: "Serviço indisponível", dot: "bg-[#C62828]" },
-  nao_configurado: { label: "Não configurado", dot: "bg-[#8C6A28]" },
-};
 
 const MESSAGE_STATUS = {
   enviada: "Enviada",
@@ -59,7 +51,7 @@ function ConversationItem({ conversa, selected, onSelect }) {
     <button
       type="button"
       onClick={() => onSelect(conversa.numero)}
-      className={`flex w-full cursor-pointer items-center gap-3 rounded-[16px] p-[14px] text-left transition-colors ${selected ? "bg-primary-soft" : "bg-canvas hover:bg-primary-soft/60"}`}
+      className={`flex w-full cursor-pointer items-center gap-3 rounded-[16px] p-[14px] text-left transition-all duration-150 active:scale-[0.99] motion-reduce:transform-none focus-visible:outline-2 focus-visible:outline-primary ${selected ? "bg-primary-soft shadow-sm" : "bg-canvas hover:-translate-y-px hover:bg-primary-soft/60 hover:shadow-sm"}`}
     >
       <span className="flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-full bg-surface text-sm font-bold text-primary">
         {initials(conversa.paciente?.nome_completo || formatPhone(conversa.numero))}
@@ -164,12 +156,16 @@ export default function WhatsAppPage() {
   }, [conversas, search]);
 
   const totalNaoLidas = conversas.reduce((acc, c) => acc + Number(c.nao_lidas || 0), 0);
-  const connection = CONNECTION[status?.conexao] || CONNECTION.unknown;
-  const providerName = status?.provedor_nome || "WhatsApp";
+  const needsActivation = status?.configurado === false;
+  const connectionIssue = status?.configurado === true && ["close", "indisponivel"].includes(status.conexao);
 
   async function handleSend(event) {
     event.preventDefault();
     setFormError("");
+    if (needsActivation) {
+      setFormError("O envio de mensagens ainda não está disponível nesta clínica.");
+      return;
+    }
     if (!selected) {
       setFormError("Selecione uma conversa para responder.");
       return;
@@ -191,25 +187,34 @@ export default function WhatsAppPage() {
     <div className="flex w-full flex-1 flex-col gap-[22px] text-[12px] antialiased">
       <PageHeader eyebrow="Conversas da clínica" title="WhatsApp" />
 
+      {(needsActivation || connectionIssue) && (
+        <div role="status" className="flex items-start gap-3 rounded-[16px] border border-border bg-surface px-5 py-4">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary">
+            <Info size={18} aria-hidden="true" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-[15px] font-bold leading-5 text-ink">
+              {needsActivation ? "Envio de mensagens indisponível" : "WhatsApp temporariamente indisponível"}
+            </p>
+            <p className="mt-1 text-sm leading-5 text-muted">
+              {needsActivation
+                ? "Você pode ler as conversas. Para responder por aqui, peça à equipe responsável que ative o WhatsApp da clínica."
+                : "Pode haver atraso nas mensagens. Tente novamente em alguns minutos."}
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="flex flex-1 flex-col gap-[16px] xl:flex-row">
         {/* Conversas */}
         <section className="flex w-full flex-col gap-[10px] rounded-[20px] border border-solid border-border bg-surface p-[16px] xl:w-[380px] xl:shrink-0">
-          <div className="flex flex-col gap-[8px] px-1 pt-1 pb-[6px]">
-            <div className="flex items-center justify-between gap-3">
-              <h3 className="font-display text-[20px] font-semibold leading-[26px] text-ink">Conversas</h3>
-              <span className={`inline-block rounded-full px-[10px] py-[6px] text-xs font-bold leading-[16px] ${totalNaoLidas > 0 ? "bg-warning-soft text-[#7A5A1E]" : "bg-canvas text-muted"}`}>
-                {totalNaoLidas > 0 ? `${totalNaoLidas} não lidas` : "Tudo lido"}
+          <div className="flex items-center justify-between gap-3 px-1 pt-1 pb-[6px]">
+            <h2 className="font-display text-[20px] font-semibold leading-[26px] text-ink">Conversas</h2>
+            {totalNaoLidas > 0 && (
+              <span className="shrink-0 rounded-full bg-warning-soft px-[10px] py-[6px] text-xs font-bold leading-[16px] text-[#7A5A1E]">
+                {totalNaoLidas} {totalNaoLidas === 1 ? "mensagem nova" : "mensagens novas"}
               </span>
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <span className="flex items-center gap-[6px] text-xs font-bold leading-[16px] text-muted">
-                <span className={`h-[7px] w-[7px] rounded-full ${connection.dot}`} />
-                {connection.label} · {providerName}
-              </span>
-              {!status?.configurado && (
-                <span className="text-xs font-bold leading-[16px] text-[#8C6A28]">Credenciais pendentes</span>
-              )}
-            </div>
+            )}
           </div>
 
           <label className="flex h-[42px] shrink-0 items-center gap-[10px] rounded-[12px] border border-solid border-border bg-canvas px-[14px]">
@@ -225,7 +230,7 @@ export default function WhatsAppPage() {
             />
           </label>
 
-          <div className="flex min-h-0 grow basis-0 flex-col gap-2 overflow-y-auto">
+          <div className="flex max-h-[320px] min-h-0 flex-col gap-2 overflow-y-auto xl:max-h-none xl:grow xl:basis-0">
             {filtradas.map((conversa) => (
               <ConversationItem
                 key={conversa.numero}
@@ -237,7 +242,9 @@ export default function WhatsAppPage() {
             {!isPending && filtradas.length === 0 && (
               <p className="rounded-[16px] bg-canvas p-4 text-center text-sm leading-[20px] text-muted">
                 {conversas.length === 0
-                  ? "Nenhuma conversa ainda. As mensagens do número autorizado aparecem aqui."
+                  ? needsActivation
+                    ? "As conversas aparecerão aqui quando o WhatsApp da clínica estiver disponível."
+                    : "Nenhuma conversa ainda. As mensagens dos pacientes aparecerão aqui."
                   : "Nenhuma conversa encontrada para esta busca."}
               </p>
             )}
@@ -264,20 +271,20 @@ export default function WhatsAppPage() {
                 <div className="flex items-center gap-[10px]">
                   <Link
                     to="/pacientes"
-                    className="inline-flex h-[44px] items-center rounded-full border border-solid border-border bg-surface px-[18px] text-sm font-semibold leading-[18px] text-ink no-underline hover:bg-canvas"
+                    className="inline-flex h-[44px] items-center rounded-full border border-solid border-border bg-surface px-[18px] text-sm font-semibold leading-[18px] text-ink no-underline transition-all duration-150 hover:-translate-y-px hover:border-primary/40 hover:bg-canvas hover:shadow-sm active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-2 focus-visible:outline-primary"
                   >
                     Ver pacientes
                   </Link>
                   <Link
                     to="/atendimentos/novo"
-                    className="inline-flex h-[44px] items-center rounded-full bg-primary px-[18px] text-sm font-semibold leading-[18px] text-surface no-underline transition-colors hover:bg-[#245a54]"
+                    className="inline-flex h-[44px] items-center rounded-full bg-primary px-[18px] text-sm font-semibold leading-[18px] text-surface no-underline shadow-[0_1px_0_rgba(31,42,36,0.08)] transition-all duration-150 hover:-translate-y-px hover:bg-[#245a54] hover:shadow-md active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                   >
                     Abrir ficha
                   </Link>
                 </div>
               </div>
 
-              <div className="flex min-h-0 grow basis-0 flex-col justify-end gap-[10px] overflow-y-auto rounded-[16px] bg-surface py-2">
+              <div className="flex min-h-[180px] max-h-[360px] flex-col gap-[10px] overflow-y-auto rounded-[16px] bg-surface py-2 xl:max-h-none xl:min-h-0 xl:grow xl:basis-0 xl:justify-end">
                 {mensagens.map((message) => (
                   <MessageBubble key={message.id} message={message} />
                 ))}
@@ -300,7 +307,7 @@ export default function WhatsAppPage() {
                           setTexto(template.mensagem);
                           setFormError("");
                         }}
-                        className="cursor-pointer rounded-full border border-solid border-border bg-canvas px-[12px] py-[6px] text-xs font-bold text-ink hover:bg-primary-soft"
+                        className="cursor-pointer rounded-full border border-solid border-border bg-canvas px-[12px] py-[6px] text-xs font-bold text-ink transition-all duration-150 hover:-translate-y-px hover:border-primary/40 hover:bg-primary-soft hover:shadow-sm active:translate-y-0 active:scale-[0.96] motion-reduce:transform-none focus-visible:outline-2 focus-visible:outline-primary"
                       >
                         {template.titulo}
                       </button>
@@ -320,23 +327,19 @@ export default function WhatsAppPage() {
                         handleSend(event);
                       }
                     }}
-                    placeholder="Escreva uma mensagem... (Enter envia, Shift+Enter quebra linha)"
+                    placeholder={needsActivation ? "Envio de mensagens indisponível" : "Escreva uma mensagem... (Enter envia, Shift+Enter quebra linha)"}
                     rows={2}
-                    className="min-h-[52px] w-full resize-y rounded-[16px] border border-solid border-border bg-surface px-4 py-3 text-[15px] leading-[22px] text-ink outline-none placeholder:text-muted focus:border-primary"
+                    disabled={needsActivation}
+                    className="min-h-[52px] w-full resize-y rounded-[16px] border border-solid border-border bg-surface px-4 py-3 text-[15px] leading-[22px] text-ink outline-none placeholder:text-muted focus:border-primary disabled:cursor-not-allowed disabled:bg-canvas"
                   />
                   <button
                     type="submit"
-                    disabled={send.isPending}
-                    className="inline-flex h-[52px] shrink-0 cursor-pointer items-center justify-center rounded-full bg-primary px-[22px] text-sm font-bold leading-[18px] text-surface transition-colors hover:bg-[#245a54] disabled:cursor-not-allowed disabled:opacity-40"
+                    disabled={send.isPending || needsActivation}
+                    className="inline-flex h-[52px] shrink-0 cursor-pointer items-center justify-center rounded-full bg-primary px-[22px] text-sm font-bold leading-[18px] text-surface shadow-[0_1px_0_rgba(31,42,36,0.08)] transition-all duration-150 hover:-translate-y-px hover:bg-[#245a54] hover:shadow-md active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0 disabled:hover:shadow-none"
                   >
                     {send.isPending ? "Enviando..." : "Enviar"}
                   </button>
                 </div>
-                {!status?.configurado && (
-                  <span className="text-xs leading-[16px] text-muted">
-                    Envio indisponível: adicione as credenciais da API oficial da Meta no servidor.
-                  </span>
-                )}
               </form>
             </>
           ) : (

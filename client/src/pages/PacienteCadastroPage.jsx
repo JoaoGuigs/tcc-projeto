@@ -217,6 +217,28 @@ function PacienteCadastroPage() {
               value={formData.convenio_id}
               label="Convênio Médico"
               onChange={handleChange}
+              sx={{
+                borderRadius: "12px",
+                backgroundColor: "#fff",
+                transition: "border-color .15s, box-shadow .15s, transform .15s",
+                "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "#2f6f68" },
+                "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#2f6f68", borderWidth: 2, boxShadow: "0 0 0 3px rgba(47,111,104,.12)" },
+              }}
+              MenuProps={{
+                PaperProps: {
+                  sx: {
+                    borderRadius: "12px",
+                    border: "1px solid #e6e2da",
+                    boxShadow: "0 12px 32px rgba(31,42,36,.12)",
+                    "& .MuiMenuItem-root": {
+                      fontSize: 14,
+                      transition: "background-color .12s",
+                      "&:hover": { backgroundColor: "#d9e8e4" },
+                      "&.Mui-selected": { backgroundColor: "#d9e8e4", fontWeight: 700, "&:hover": { backgroundColor: "#cce0db" } },
+                    },
+                  },
+                },
+              }}
             >
               <MenuItem value="">
                 <em>Selecione um convênio</em>
@@ -265,12 +287,16 @@ function PacienteCadastroPage() {
               setErrors({ nome_completo: "", celular: "" });
             }}
             sx={{
-              color: "#666",
-              borderColor: "#ddd",
+              color: "#1f2a24",
+              borderColor: "#e6e2da",
+              borderRadius: "12px",
+              transition: "all .15s",
               "&:hover": {
-                borderColor: "#999",
-                backgroundColor: "#f5f5f5",
+                borderColor: "rgba(47,111,104,.4)",
+                backgroundColor: "#f7f5f1",
+                transform: "translateY(-1px)",
               },
+              "&:active": { transform: "translateY(0) scale(.98)" },
             }}
           >
             Cancelar
@@ -279,11 +305,16 @@ function PacienteCadastroPage() {
             type="submit"
             variant="contained"
             sx={{
-              backgroundColor: "#2c3e50",
+              backgroundColor: "#2f6f68",
               color: "white",
+              borderRadius: "12px",
+              transition: "all .15s",
               "&:hover": {
-                backgroundColor: "#1a252f",
+                backgroundColor: "#245a54",
+                transform: "translateY(-1px)",
+                boxShadow: "0 6px 16px rgba(47,111,104,.25)",
               },
+              "&:active": { transform: "translateY(0) scale(.98)" },
             }}
           >
             Salvar Paciente

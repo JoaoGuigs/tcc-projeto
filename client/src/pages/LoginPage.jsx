@@ -108,7 +108,7 @@ export default function LoginPage() {
                   type="button"
                   onClick={() => setShowPassword((visible) => !visible)}
                   aria-label={showPassword ? "Ocultar senha" : "Mostrar senha"}
-                  className="absolute right-2 top-1/2 grid h-9 w-9 -translate-y-1/2 cursor-pointer place-items-center rounded-full text-muted hover:bg-canvas"
+                  className="absolute right-2 top-1/2 grid h-9 w-9 -translate-y-1/2 cursor-pointer place-items-center rounded-full text-muted transition-all duration-150 hover:bg-canvas hover:text-ink active:scale-[0.92] motion-reduce:transform-none focus-visible:outline-2 focus-visible:outline-primary"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -126,7 +126,7 @@ export default function LoginPage() {
 
           <p className="mt-7 text-center text-sm text-muted">
             Primeiro acesso?{" "}
-            <Link to="/cadastro" className="font-bold text-primary no-underline hover:underline">Criar conta profissional</Link>
+            <Link to="/cadastro" className="font-bold text-primary no-underline transition-colors hover:text-[#245a54] hover:underline focus-visible:outline-2 focus-visible:outline-primary">Criar conta profissional</Link>
           </p>
         </div>
       </section>

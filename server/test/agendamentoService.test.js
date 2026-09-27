@@ -21,3 +21,19 @@ test("converte colisão de índice em conflito de horário", async (t) => {
     (error) => error.statusCode === 409 && /ocupado/.test(error.message),
   );
 });
+
+test("grade diária inclui todos os horários e disponibilidade exclui os ocupados", async (t) => {
+  const original = db.query;
+  t.after(() => { db.query = original; });
+  db.query = async () => [[{ hora: "08:30" }, { hora: "13:00" }]];
+
+  const possible = service.getPossibleTimes();
+  const available = await service.getAvailableTimesByDate("2026-09-27", 1);
+
+  assert.equal(possible.length, 17);
+  assert.ok(possible.includes("08:30"));
+  assert.ok(possible.includes("13:00"));
+  assert.ok(!available.includes("08:30"));
+  assert.ok(!available.includes("13:00"));
+  assert.equal(available.length, possible.length - 2);
+});

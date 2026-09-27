@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { Fragment, useEffect, useMemo } from "react";
 import { Link, useOutletContext } from "react-router-dom";
 import {
   ArrowRight,
@@ -38,6 +38,11 @@ function firstName(nome, fallback = "Ana") {
   return clean[0] || parts[0] || fallback;
 }
 
+function insuranceName(appointment) {
+  const name = String(appointment.convenio || "").trim();
+  return !name || name.toLocaleLowerCase("pt-BR") === "particular" ? "Particular" : name;
+}
+
 function pillStyle(status, hasAtendimento) {
   if (hasAtendimento) return "bg-done-soft text-primary";
   const normalized = String(status || "").toLowerCase();
@@ -69,7 +74,7 @@ function AgendaRow({ appointment }) {
   return (
     <Link
       to={`/pacientes?perfil=${appointment.paciente_id}`}
-      className="group grid min-h-[70px] grid-cols-[58px_minmax(0,1fr)_auto] items-center gap-3 rounded-[16px] border border-transparent bg-canvas px-3.5 py-2.5 no-underline transition-all hover:border-border hover:bg-primary-soft/60 sm:grid-cols-[70px_minmax(0,1fr)_auto_20px] sm:px-4"
+      className="group grid min-h-[70px] grid-cols-[58px_minmax(0,1fr)_auto] items-center gap-3 rounded-[16px] border border-transparent bg-canvas px-3.5 py-2.5 no-underline transition-all duration-150 hover:-translate-y-px hover:border-border hover:bg-primary-soft/60 hover:shadow-sm active:translate-y-0 motion-reduce:transform-none focus-visible:outline-2 focus-visible:outline-primary sm:grid-cols-[70px_minmax(0,1fr)_auto_20px] sm:px-4"
     >
       <span className="font-display text-[18px] font-semibold leading-none text-ink">
         {dayjs(appointment.data_hora).format("HH:mm")}
@@ -81,6 +86,9 @@ function AgendaRow({ appointment }) {
         <small className="truncate text-xs leading-[18px] text-muted">
           {appointment.tipo_consulta || "Consulta de fisioterapia"}
         </small>
+        <small className="text-xs leading-[18px] text-muted">
+          {insuranceName(appointment) === "Particular" ? "Particular" : `Convênio: ${insuranceName(appointment)}`}
+        </small>
       </span>
       <StatusPill status={appointment.status} hasAtendimento={hasAtendimento} />
       <ArrowRight size={16} className="hidden text-muted transition-transform group-hover:translate-x-0.5 sm:block" />
@@ -88,20 +96,33 @@ function AgendaRow({ appointment }) {
   );
 }
 
-function AvailableRow({ time }) {
+function AvailableRow({ time, date }) {
   return (
     <Link
-      to="/agendar"
-      className="group grid min-h-[70px] grid-cols-[58px_minmax(0,1fr)_auto] items-center gap-3 rounded-[16px] border border-dashed border-[#9BBDB7] bg-primary-soft/60 px-3.5 py-2.5 no-underline transition-colors hover:bg-primary-soft sm:grid-cols-[70px_minmax(0,1fr)_auto_20px] sm:px-4"
+      to={`/agendar?data=${date}&horario=${encodeURIComponent(time)}`}
+      className="group grid min-h-[70px] grid-cols-[58px_minmax(0,1fr)_auto] items-center gap-3 rounded-[16px] border border-dashed border-[#9BBDB7] bg-primary-soft/60 px-3.5 py-2.5 no-underline transition-all duration-150 hover:-translate-y-px hover:bg-primary-soft hover:shadow-sm active:translate-y-0 motion-reduce:transform-none focus-visible:outline-2 focus-visible:outline-primary sm:grid-cols-[70px_minmax(0,1fr)_auto_20px] sm:px-4"
     >
       <span className="font-display text-[18px] font-semibold leading-none text-primary">{time}</span>
       <span className="flex min-w-0 flex-col gap-0.5">
-        <strong className="truncate text-[15px] font-bold leading-5 text-ink">Horário disponível</strong>
-        <small className="truncate text-xs leading-[18px] text-muted">Bom horário para um encaixe</small>
+        <strong className="truncate text-[15px] font-bold leading-5 text-ink">Horário livre</strong>
+        <small className="truncate text-xs leading-[18px] text-muted">Selecione para agendar</small>
       </span>
       <StatusPill status="Vago" />
       <Plus size={16} className="hidden text-primary transition-transform group-hover:rotate-90 sm:block" />
     </Link>
+  );
+}
+
+function UnavailableRow({ time, past = false }) {
+  return (
+    <div className="grid min-h-[70px] grid-cols-[58px_minmax(0,1fr)] items-center gap-3 rounded-[16px] bg-canvas px-3.5 py-2.5 sm:grid-cols-[70px_minmax(0,1fr)_auto_20px] sm:px-4">
+      <span className="font-display text-[18px] font-semibold leading-none text-muted">{time}</span>
+      <span className="min-w-0">
+        <strong className="block truncate text-[15px] font-bold text-ink">Sem agendamento</strong>
+        <small className="block truncate text-xs text-muted">{past ? "Horário já passou" : "Horário indisponível"}</small>
+      </span>
+      <span className="hidden rounded-full bg-white px-3 py-1.5 text-xs font-bold text-muted sm:inline-flex">{past ? "Encerrado" : "Indisponível"}</span>
+    </div>
   );
 }
 
@@ -130,28 +151,32 @@ function Metric({ icon: Icon, label, value, detail, tone = "success" }) {
 }
 
 const priorityStyles = {
-  primary: { icon: "bg-primary text-white", action: "bg-primary text-white hover:bg-[#245a54]" },
-  warning: { icon: "bg-warning-soft text-[#7A5A1E]", action: "bg-warning-soft text-[#7A5A1E] hover:bg-[#eadab6]" },
-  soft: { icon: "bg-primary-soft text-primary", action: "bg-primary-soft text-primary hover:bg-[#cce0db]" },
+  primary: "bg-primary-soft text-primary",
+  warning: "bg-warning-soft text-[#7A5A1E]",
+  soft: "bg-primary-soft text-primary",
 };
 
-function PriorityCard({ icon: Icon, title, detail, label, tone = "primary", to = "/agendar" }) {
-  const styles = priorityStyles[tone];
+function PriorityCard({ icon: Icon, title, detail, label, tone = "primary", to = "/agendar", featured = false }) {
   return (
-    <article className="grid grid-cols-[40px_minmax(0,1fr)] gap-3 rounded-[16px] bg-canvas p-3.5">
-      <span className={`grid h-10 w-10 place-items-center rounded-[12px] ${styles.icon}`}>
-        <Icon size={18} />
+    <article className={`rounded-[16px] p-4 ${featured ? "bg-[#FBF7ED]" : "bg-canvas"}`}>
+      <div className="flex items-start gap-3">
+      <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-[11px] ${priorityStyles[tone]}`}>
+        <Icon size={19} strokeWidth={2} aria-hidden="true" />
       </span>
       <div className="min-w-0">
         <strong className="block text-[15px] font-bold leading-5 text-ink">{title}</strong>
-        <p className="mt-0.5 text-xs leading-[18px] text-muted">{detail}</p>
-        <Link
-          to={to}
-          className={`mt-2.5 inline-flex h-8 items-center gap-1.5 rounded-full px-3 text-xs font-bold no-underline transition-colors ${styles.action}`}
-        >
-          {label} <ArrowRight size={13} />
-        </Link>
+        <p className="mt-1 text-sm leading-5 text-muted">{detail}</p>
       </div>
+      </div>
+      {featured ? (
+        <Link to={to} className="mt-4 flex min-h-11 items-center justify-center gap-2 rounded-[11px] bg-primary px-4 text-sm font-bold text-white no-underline transition-colors hover:bg-[#245a54] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+          {label} <ArrowRight size={16} aria-hidden="true" />
+        </Link>
+      ) : (
+        <Link to={to} className="mt-2 inline-flex min-h-11 items-center gap-2 text-sm font-bold text-primary no-underline hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+          {label} <ArrowRight size={15} aria-hidden="true" />
+        </Link>
+      )}
     </article>
   );
 }
@@ -171,7 +196,16 @@ export default function HomePage() {
     return [...active].sort((a, b) => new Date(a.data_hora) - new Date(b.data_hora));
   }, [fetched]);
 
-  const { data: availableTimes = [] } = useQuery({
+  const insuranceCounts = useMemo(() => {
+    const counts = new Map();
+    for (const appointment of appointments) {
+      const name = insuranceName(appointment);
+      counts.set(name, (counts.get(name) || 0) + 1);
+    }
+    return [...counts].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], "pt-BR"));
+  }, [appointments]);
+
+  const { data: availableTimes = [], isPending: loadingAvailableTimes, isError: availableTimesError } = useQuery({
     queryKey: ["dashboard-horarios-disponiveis", range, user?.profissional_id],
     queryFn: async () => (await api.get("/agendamentos/horarios-disponiveis", {
       params: { data: range.dataInicio, profissional_id: user.profissional_id },
@@ -179,10 +213,27 @@ export default function HomePage() {
     enabled: Boolean(user?.profissional_id),
   });
 
+  const { data: possibleTimes = [], isPending: loadingPossibleTimes, isError: possibleTimesError } = useQuery({
+    queryKey: ["dashboard-horarios-da-agenda"],
+    queryFn: async () => (await api.get("/agendamentos/horarios-da-agenda")).data,
+    enabled: Boolean(user?.profissional_id),
+  });
+
   const usefulAvailableTimes = useMemo(() => availableTimes.filter((time) => {
     const slot = dayjs(`${range.dataInicio} ${time}`);
     return slot.isAfter(dayjs());
   }), [availableTimes, range.dataInicio]);
+
+  const agendaSlots = useMemo(() => {
+    const byTime = new Map(appointments.map((item) => [dayjs(item.data_hora).format("HH:mm"), item]));
+    const available = new Set(availableTimes);
+    return [...new Set([...possibleTimes, ...byTime.keys()])].sort().map((time) => ({
+      time,
+      appointment: byTime.get(time),
+      available: available.has(time),
+      past: !dayjs(`${range.dataInicio} ${time}`).isAfter(dayjs()),
+    }));
+  }, [appointments, availableTimes, possibleTimes, range.dataInicio]);
 
   const summary = getDashboardSummary(appointments);
   const pending = useMemo(
@@ -199,7 +250,6 @@ export default function HomePage() {
   const completed = appointments.filter((item) => Boolean(item.atendimento_id)).length;
   const total = appointments.length;
   const progress = total ? Math.round((completed / total) * 100) : 0;
-  const visible = appointments.slice(0, 5);
 
   const waitingAppointment = appointments.find(
     (item) => !item.atendimento_id && !/confirm|chegou/i.test(item.status || ""),
@@ -213,7 +263,7 @@ export default function HomePage() {
       title: `Confirmar presença de ${firstName(waitingAppointment.paciente_nome, "paciente")}`,
       detail: `Consulta marcada para ${dayjs(waitingAppointment.data_hora).format("HH:mm")}`,
       label: "Abrir WhatsApp",
-      tone: "primary",
+      tone: "warning",
       to: "/whatsapp",
     },
     readyForRecord && {
@@ -221,7 +271,7 @@ export default function HomePage() {
       title: `Registrar atendimento de ${firstName(readyForRecord.paciente_nome, "paciente")}`,
       detail: `Atendimento de hoje às ${dayjs(readyForRecord.data_hora).format("HH:mm")}`,
       label: "Registrar agora",
-      tone: "warning",
+      tone: "primary",
       to: `/atendimentos/novo?pacienteId=${readyForRecord.paciente_id}&agendamentoId=${readyForRecord.id}`,
     },
     usefulAvailableTimes[0] && {
@@ -271,7 +321,7 @@ export default function HomePage() {
             {next && (
               <Link
                 to={`/pacientes?perfil=${next.paciente_id}`}
-                className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full border border-white/30 bg-white/10 px-4 text-sm font-bold text-white no-underline transition-colors hover:bg-white/20"
+                className="inline-flex h-10 shrink-0 items-center gap-2 rounded-full border border-white/30 bg-white/10 px-4 text-sm font-bold text-white no-underline transition-all duration-150 hover:-translate-y-px hover:bg-white/20 hover:shadow-md active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-2 focus-visible:outline-white"
               >
                 Abrir ficha <ArrowRight size={16} />
               </Link>
@@ -308,30 +358,42 @@ export default function HomePage() {
                   </span>
                 )}
               </div>
-              <p className="mt-1 text-sm text-muted">Acompanhe o andamento dos atendimentos.</p>
+              <p className="mt-1 text-sm text-muted">Todos os horários do dia, com consultas e vagas livres.</p>
             </div>
-            <Link to="/agendar" className="inline-flex items-center gap-1.5 text-sm font-bold text-primary no-underline hover:underline">
+            <Link to="/agendar" className="inline-flex items-center gap-1.5 text-sm font-bold text-primary no-underline transition-all duration-150 hover:gap-2.5 hover:text-[#245a54] hover:underline focus-visible:outline-2 focus-visible:outline-primary">
               Ver agenda completa <ArrowRight size={15} />
             </Link>
           </header>
 
-          <div className="flex flex-col gap-2.5">
-            {visible.slice(0, 2).map((appointment) => <AgendaRow key={appointment.id} appointment={appointment} />)}
-            {usefulAvailableTimes[0] && <AvailableRow time={usefulAvailableTimes[0]} />}
-            {visible.slice(2).map((appointment) => <AgendaRow key={appointment.id} appointment={appointment} />)}
-
-            {!isLoading && !isError && visible.length === 0 && (
-              <div className="flex min-h-[240px] flex-col items-center justify-center rounded-[18px] bg-canvas p-6 text-center">
-                <span className="grid h-11 w-11 place-items-center rounded-full bg-primary-soft text-primary"><CalendarDays size={21} /></span>
-                <strong className="mt-3 text-[15px] text-ink">Nenhuma consulta para hoje</strong>
-                <span className="mt-1 text-sm text-muted">A agenda está livre para novos atendimentos.</span>
-                <Link to="/agendar" className="mt-4 inline-flex h-9 items-center rounded-full bg-primary px-4 text-xs font-bold text-white no-underline">Marcar consulta</Link>
-              </div>
+          <div className="flex flex-col gap-2.5" aria-label="Horários da agenda de hoje">
+            {(isLoading || loadingPossibleTimes || loadingAvailableTimes) && user?.profissional_id && (
+              <p role="status" className="col-span-full rounded-[16px] bg-canvas p-5 text-sm text-muted">Carregando horários de hoje…</p>
             )}
-            {isError && <div className="rounded-[16px] bg-[#F0DDDA] p-5 text-sm text-[#873C35]">Não foi possível carregar a agenda. Tente atualizar a página.</div>}
+            {(isError || possibleTimesError || availableTimesError) && (
+              <p role="alert" className="col-span-full rounded-[16px] bg-[#F0DDDA] p-5 text-sm text-[#873C35]">Não foi possível carregar todos os horários. Tente atualizar a página.</p>
+            )}
+            {!user?.profissional_id && (
+              <p className="col-span-full rounded-[16px] bg-canvas p-5 text-sm text-muted">Vincule um profissional à conta para consultar a agenda.</p>
+            )}
+            {!isLoading && !loadingPossibleTimes && !loadingAvailableTimes && !isError && !possibleTimesError && !availableTimesError && agendaSlots.map(({ time, appointment, available, past }, index) => (
+              <Fragment key={time}>
+                {(index === 0 || (time >= "12:00" && agendaSlots[index - 1].time < "12:00")) && (
+                  <div className="flex items-center gap-3 px-1 pb-0.5 pt-2" aria-hidden="true">
+                    <span className="text-xs font-bold uppercase tracking-[0.06em] text-muted">
+                      {time < "12:00" ? "Manhã" : "Tarde"}
+                    </span>
+                    <span className="h-px flex-1 bg-border" />
+                  </div>
+                )}
+                {appointment ? <AgendaRow appointment={appointment} />
+                  : available && !past ? <AvailableRow time={time} date={range.dataInicio} />
+                    : <UnavailableRow time={time} past={past} />}
+              </Fragment>
+            ))}
           </div>
         </article>
 
+        <div className="flex min-w-0 flex-col gap-4">
         <aside className="flex min-w-0 flex-col rounded-[24px] border border-border bg-surface p-4 sm:p-[22px]">
           <header className="mb-4 flex items-start justify-between gap-3">
             <div>
@@ -339,12 +401,12 @@ export default function HomePage() {
               <p className="mt-1 text-sm text-muted">O que pede sua atenção agora.</p>
             </div>
             <span className="shrink-0 rounded-full bg-warning-soft px-2.5 py-1.5 text-xs font-bold text-[#7A5A1E]">
-              {priorities.length} {priorities.length === 1 ? "pendente" : "pendentes"}
+              {priorities.length} {priorities.length === 1 ? "ação" : "ações"}
             </span>
           </header>
 
           <div className="flex flex-col gap-2.5">
-            {priorities.map((priority) => <PriorityCard key={priority.title} {...priority} />)}
+            {priorities.map((priority, index) => <PriorityCard key={priority.title} {...priority} featured={index === 0} />)}
             {priorities.length === 0 && (
               <div className="flex min-h-[180px] flex-col items-center justify-center rounded-[16px] bg-canvas p-6 text-center">
                 <span className="grid h-10 w-10 place-items-center rounded-full bg-success-soft text-primary"><Check size={20} /></span>
@@ -369,6 +431,26 @@ export default function HomePage() {
             </div>
           </div>
         </aside>
+
+        <section aria-labelledby="insurance-today-title" className="rounded-[24px] border border-border bg-surface p-4 sm:p-[22px]">
+          <header className="flex items-start justify-between gap-3">
+            <div>
+              <h3 id="insurance-today-title" className="font-display text-2xl font-semibold leading-[31px] tracking-[-0.025em] text-ink">Convênios de hoje</h3>
+              <p className="mt-1 text-sm text-muted">Consultas marcadas por convênio.</p>
+            </div>
+            {!isLoading && !isError && <span className="shrink-0 rounded-full bg-primary-soft px-2.5 py-1.5 text-xs font-bold text-primary">{total} {total === 1 ? "consulta" : "consultas"}</span>}
+          </header>
+          {isLoading && <p role="status" className="mt-5 text-sm text-muted">Carregando convênios de hoje…</p>}
+          {isError && <p role="alert" className="mt-5 text-sm text-[#75413D]">Não foi possível carregar os convênios. Atualize a página para tentar novamente.</p>}
+          {!isLoading && !isError && insuranceCounts.length === 0 && <p className="mt-5 rounded-[13px] bg-canvas p-4 text-sm text-muted">Nenhuma consulta marcada para hoje.</p>}
+          {!isLoading && !isError && insuranceCounts.length > 0 && <dl className="mt-4 divide-y divide-border">
+            {insuranceCounts.map(([name, count]) => <div key={name} className="flex items-baseline justify-between gap-4 py-3 first:pt-0 last:pb-0">
+              <dt className="min-w-0 break-words text-sm font-semibold text-ink">{name}</dt>
+              <dd className="shrink-0 font-display text-lg font-bold tabular-nums text-primary">{count}</dd>
+            </div>)}
+          </dl>}
+        </section>
+        </div>
       </section>
     </div>
   );

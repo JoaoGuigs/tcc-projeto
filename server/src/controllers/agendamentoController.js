@@ -46,6 +46,15 @@ async function getHorariosDisponiveis(req, res) {
   }
 }
 
+async function getHorariosDaAgenda(req, res) {
+  try {
+    await getProfessionalId(req);
+    res.json(agendamentoService.getPossibleTimes());
+  } catch (error) {
+    res.status(error.statusCode || 500).json({ message: error.message || "Erro ao buscar horários da agenda." });
+  }
+}
+
 async function updateAgendamento(req, res) {
   try {
     res.json(await agendamentoService.update(req.params.id, await getProfessionalId(req), req.body));
@@ -64,4 +73,4 @@ async function cancelAgendamento(req, res) {
   }
 }
 
-module.exports = { getAgendamentos, createAgendamento, getHorariosDisponiveis, updateAgendamento, cancelAgendamento };
+module.exports = { getAgendamentos, createAgendamento, getHorariosDisponiveis, getHorariosDaAgenda, updateAgendamento, cancelAgendamento };

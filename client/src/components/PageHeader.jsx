@@ -7,10 +7,12 @@ import { NewPatientModal } from "./NewPatientModal";
  * eyebrow + título grande + ações "Novo paciente" / "+ Marcar consulta".
  * O botão "Novo paciente" abre o modal de cadastro.
  */
-export function PageHeader({ eyebrow, title, showActions = true, onNewAppointment }) {
+export function PageHeader({ eyebrow, title, showActions = true, onNewAppointment, onNewPatient, onPatientCreated }) {
   const [newPatientOpen, setNewPatientOpen] = useState(false);
   const scheduleClass =
-    "inline-flex h-[46px] flex-1 items-center justify-center rounded-full bg-primary px-[18px] text-sm font-bold leading-[18px] text-surface transition-colors hover:bg-[#245a54] sm:flex-none";
+    "inline-flex h-[46px] flex-1 items-center justify-center rounded-full bg-primary px-[18px] text-sm font-bold leading-[18px] text-surface shadow-[0_1px_0_rgba(31,42,36,0.08)] transition-all duration-150 hover:-translate-y-px hover:bg-[#245a54] hover:shadow-md active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:flex-none";
+  const patientClass =
+    "inline-flex h-[46px] flex-1 cursor-pointer items-center justify-center rounded-full border border-solid border-border bg-surface px-[18px] text-sm font-semibold leading-[18px] text-ink transition-all duration-150 hover:-translate-y-px hover:border-primary/40 hover:bg-canvas hover:shadow-sm active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary sm:flex-none";
 
   return (
     <>
@@ -27,8 +29,8 @@ export function PageHeader({ eyebrow, title, showActions = true, onNewAppointmen
           <div className="flex w-full items-center gap-[10px] sm:w-auto">
             <button
               type="button"
-              onClick={() => setNewPatientOpen(true)}
-              className="inline-flex h-[46px] flex-1 cursor-pointer items-center justify-center rounded-full border border-solid border-border bg-surface px-[18px] text-sm font-semibold leading-[18px] text-ink transition-colors hover:bg-canvas sm:flex-none"
+              onClick={onNewPatient || (() => setNewPatientOpen(true))}
+              className={patientClass}
             >
               Novo paciente
             </button>
@@ -45,7 +47,7 @@ export function PageHeader({ eyebrow, title, showActions = true, onNewAppointmen
         )}
       </div>
 
-      <NewPatientModal open={newPatientOpen} onClose={() => setNewPatientOpen(false)} />
+      {!onNewPatient && <NewPatientModal open={newPatientOpen} onClose={() => setNewPatientOpen(false)} onCreated={onPatientCreated} />}
     </>
   );
 }

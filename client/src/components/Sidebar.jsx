@@ -50,8 +50,8 @@ export function Sidebar() {
             to={to}
             className={({ isActive }) =>
               cn(
-                "flex h-[48px] shrink-0 items-center gap-3 rounded-[14px] px-[14px] text-[15px] leading-[20px] no-underline transition-colors",
-                isActive ? "bg-primary-soft font-semibold text-primary" : "font-medium text-muted hover:bg-canvas",
+                "flex h-[48px] shrink-0 items-center gap-3 rounded-[14px] px-[14px] text-[15px] leading-[20px] no-underline transition-all duration-150 focus-visible:outline-2 focus-visible:outline-primary",
+                isActive ? "bg-primary-soft font-semibold text-primary" : "font-medium text-muted hover:-translate-y-px hover:bg-canvas hover:text-ink hover:shadow-sm active:translate-y-0 motion-reduce:transform-none",
               )
             }
           >
@@ -86,8 +86,8 @@ export function MobileNav() {
           key={to}
           to={to}
           className={({ isActive }) => cn(
-            "flex min-w-[58px] flex-col items-center gap-1 rounded-[10px] px-2 py-1.5 text-[11px] font-semibold text-muted no-underline",
-            isActive && "bg-primary-soft text-primary",
+            "flex min-w-[58px] flex-col items-center gap-1 rounded-[10px] px-2 py-1.5 text-[11px] font-semibold text-muted no-underline transition-all duration-150 active:scale-[0.96] motion-reduce:transform-none",
+            isActive ? "bg-primary-soft text-primary" : "hover:bg-canvas hover:text-ink",
           )}
         >
           <Icon d={d} />
