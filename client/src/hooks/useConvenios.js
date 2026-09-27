@@ -1,10 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import api from "../services/api";
+import { queryKeys } from "../lib/queryKeys";
 
-export const convenioKeys = { all: ["convenios"] };
+export const convenioKeys = { all: queryKeys.convenios };
 
-export function useConvenios() {
-  return useQuery({ queryKey: convenioKeys.all, queryFn: async () => (await api.get("/convenios")).data });
+export function useConvenios(enabled = true) {
+  return useQuery({ queryKey: queryKeys.convenios, queryFn: async () => (await api.get("/convenios")).data, enabled });
 }
 
 export function useCreateConvenio() {

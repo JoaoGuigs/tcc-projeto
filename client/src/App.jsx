@@ -1,10 +1,12 @@
 import { lazy, Suspense } from "react";
 import { Box, CircularProgress } from "@mui/material";
 import { createTheme, ThemeProvider } from "@mui/material/styles";
-import { Navigate, Routes, Route } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthContext";
 import { ProtectedRoute } from "./auth/ProtectedRoute";
 import { MainLayout } from "./components/MainLayout";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { DateProvider } from "./components/DateProvider";
 
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const ConveniosPage = lazy(() => import("./pages/ConveniosPage"));
@@ -18,6 +20,7 @@ const RegistrarAtendimentoPage = lazy(() => import("./pages/RegistrarAtendimento
 const ConfiguracoesPage = lazy(() => import("./pages/ConfiguracoesPage"));
 const WhatsAppPage = lazy(() => import("./pages/WhatsAppPage"));
 const FinanceiroPage = lazy(() => import("./pages/FinanceiroPage"));
+const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 
 const theme = createTheme({
   typography: { fontFamily: ['"Source Sans 3"', "system-ui", "sans-serif"].join(",") },
@@ -32,30 +35,34 @@ const Loading = () => <Box sx={{ minHeight: "100vh", display: "grid", placeItems
 export default function App() {
   return (
     <ThemeProvider theme={theme}>
-      <AuthProvider>
-        <Suspense fallback={<Loading />}>
-          <Routes>
-            <Route path="/" element={<LoginPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/cadastro" element={<CadastroUsuarioPage />} />
-            <Route element={<ProtectedRoute />}>
-              <Route element={<MainLayout />}>
-                <Route path="/home" element={<HomePage />} />
-                <Route path="/convenios" element={<ConveniosPage />} />
-                <Route path="/pacientes/novo" element={<PacienteCadastroPage />} />
-                <Route path="/pacientes" element={<PacientesPage />} />
-                <Route path="/agendar" element={<AgendarConsultaPage />} />
-                <Route path="/relatorios" element={<RelatorioPacientePage />} />
-                <Route path="/atendimentos/novo" element={<RegistrarAtendimentoPage />} />
-                <Route path="/configuracoes" element={<ConfiguracoesPage />} />
-                <Route path="/whatsapp" element={<WhatsAppPage />} />
-                <Route path="/financeiro" element={<FinanceiroPage />} />
-              </Route>
-            </Route>
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </Suspense>
-      </AuthProvider>
+      <DateProvider>
+        <AuthProvider>
+          <ErrorBoundary>
+            <Suspense fallback={<Loading />}>
+              <Routes>
+                <Route path="/" element={<LoginPage />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/cadastro" element={<CadastroUsuarioPage />} />
+                <Route element={<ProtectedRoute />}>
+                  <Route element={<MainLayout />}>
+                    <Route path="/home" element={<HomePage />} />
+                    <Route path="/convenios" element={<ConveniosPage />} />
+                    <Route path="/pacientes/novo" element={<PacienteCadastroPage />} />
+                    <Route path="/pacientes" element={<PacientesPage />} />
+                    <Route path="/agendar" element={<AgendarConsultaPage />} />
+                    <Route path="/relatorios" element={<RelatorioPacientePage />} />
+                    <Route path="/atendimentos/novo" element={<RegistrarAtendimentoPage />} />
+                    <Route path="/configuracoes" element={<ConfiguracoesPage />} />
+                    <Route path="/whatsapp" element={<WhatsAppPage />} />
+                    <Route path="/financeiro" element={<FinanceiroPage />} />
+                  </Route>
+                </Route>
+                <Route path="*" element={<NotFoundPage />} />
+              </Routes>
+            </Suspense>
+          </ErrorBoundary>
+        </AuthProvider>
+      </DateProvider>
     </ThemeProvider>
   );
 }

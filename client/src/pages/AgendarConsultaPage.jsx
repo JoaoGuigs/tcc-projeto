@@ -19,6 +19,7 @@ const TONES = {
   Chegou: "bg-arrived-soft text-[#6b4c89]",
   Concluído: "bg-done-soft text-ink",
   Faltou: "bg-[#f7dfdc] text-[#9a3832]",
+  Cancelado: "bg-canvas text-muted",
 };
 const inputClass = "h-11 w-full rounded-xl border border-border bg-white px-3 text-sm text-ink outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10";
 

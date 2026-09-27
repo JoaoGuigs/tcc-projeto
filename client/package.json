@@ -6,6 +6,7 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
+    "@hookform/resolvers": "^5.9.1",
     "@mui/icons-material": "^7.1.2",
     "@mui/material": "^7.1.2",
     "@mui/x-date-pickers": "^8.15.0",
@@ -15,16 +16,18 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dayjs": "^1.11.18",
-    "lucide-react": "^1.46.0",
+    "lucide-react": "^1.48.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-hook-form": "^7.89.0",
     "react-router-dom": "^7.6.3",
     "tailwind-merge": "^3.7.0",
-    "tailwindcss": "^4.3.3"
+    "tailwindcss": "^4.3.3",
+    "zod": "^4.6.5"
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "test": "node --test",
     "lint": "eslint src",

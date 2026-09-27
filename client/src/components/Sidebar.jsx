@@ -24,9 +24,9 @@ const navigation = [
 ];
 
 function initials(nome) {
-  if (!nome) return "AS";
+  if (!nome) return "?";
   const parts = String(nome).split(/\s+/).filter((p) => !/^(dra?\.?)$/i.test(p));
-  if (parts.length === 0) return "AS";
+  if (parts.length === 0) return "?";
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
@@ -67,9 +67,12 @@ export function Sidebar() {
         </div>
         <div className="flex min-w-0 flex-col gap-px">
           <p className="truncate text-[15px] font-semibold leading-[20px] text-ink">
-            {user?.nome || "Dra. Ana Souza"}
+            {user?.nome || "Profissional"}
+            {user?.is_admin ? (
+              <span className="ml-2 rounded-full bg-primary-soft px-2 py-0.5 text-[11px] font-bold text-primary">Admin</span>
+            ) : null}
           </p>
-          <p className="text-xs leading-[18px] text-muted">Fisioterapeuta</p>
+          <p className="text-xs leading-[18px] text-muted">{user?.cargo || user?.especialidade || "Equipe clínica"}</p>
         </div>
       </div>
     </aside>

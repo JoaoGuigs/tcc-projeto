@@ -18,13 +18,17 @@ export default defineConfig({
     },
   },
   build: {
-    sourcemap: true,
+    sourcemap: "hidden",
+    chunkSizeWarningLimit: 600,
+    target: "es2022",
     rollupOptions: {
       output: {
         manualChunks: {
           "react-vendor": ["react", "react-dom", "react-router-dom"],
           "mui-vendor": ["@mui/material", "@mui/icons-material", "@emotion/react", "@emotion/styled"],
           "data-vendor": ["@tanstack/react-query", "axios"],
+          "date-vendor": ["dayjs", "@mui/x-date-pickers"],
+          "icon-vendor": ["lucide-react"],
         },
       },
     },
