@@ -83,6 +83,20 @@ test("primeiro usuário, login, me, cookie, logout e bloqueio", async (t) => {
   assert.equal(login.status, 200);
   assert.match(login.headers["set-cookie"]?.join(";") || "", /session=/);
   assert.equal(login.body.user.email, "primeiro@example.com");
+  assert.equal(login.body.user.is_admin, true);
+
+  const csrfToken = (login.headers["set-cookie"]?.join(";").match(/csrf=([^;]+)/) || [])[1] || "";
+  const withCsrf = (req) => (csrfToken ? req.set("x-csrf-token", csrfToken) : req);
+
+  // Admin pode criar novos profissionais após o bootstrap.
+  const adminCreate = await withCsrf(agent.post("/usuarios/profissionais")).send({
+    nome: "Segundo Profissional",
+    email: "segundo@example.com",
+    senha: "senha-forte-123",
+    registro_profissional: "CREFITO-AUTH-2",
+    especialidade: "Pilates",
+  });
+  assert.equal(adminCreate.status, 201);
 
   const me = await agent.get("/usuarios/me");
   assert.equal(me.status, 200);
@@ -91,7 +105,7 @@ test("primeiro usuário, login, me, cookie, logout e bloqueio", async (t) => {
   const clinicGet = await agent.get("/configuracoes/clinica");
   assert.equal(clinicGet.status, 200);
 
-  const clinicPut = await agent.put("/configuracoes/clinica").send({
+  const clinicPut = await withCsrf(agent.put("/configuracoes/clinica")).send({
     nome_clinica: "Clínica Teste",
     cnpj: "00.000.000/0001-00",
     telefone: "48999990000",
@@ -99,7 +113,7 @@ test("primeiro usuário, login, me, cookie, logout e bloqueio", async (t) => {
   });
   assert.equal(clinicPut.status, 200);
 
-  const mensagem = await agent.post("/configuracoes/mensagens").send({
+  const mensagem = await withCsrf(agent.post("/configuracoes/mensagens")).send({
     titulo: "Lembrete",
     mensagem: "Olá, lembrete de consulta.",
   });
@@ -109,7 +123,7 @@ test("primeiro usuário, login, me, cookie, logout e bloqueio", async (t) => {
   assert.equal(mensagens.status, 200);
   assert.equal(mensagens.body.length, 1);
 
-  const logout = await agent.post("/usuarios/logout");
+  const logout = await withCsrf(agent.post("/usuarios/logout"));
   assert.equal(logout.status, 204);
 
   const afterLogout = await agent.get("/usuarios/me");

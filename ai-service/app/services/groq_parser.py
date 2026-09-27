@@ -33,30 +33,44 @@ async def parse_mensagem(mensagem: str) -> AgendamentoExtraido:
     if local:
         return local
 
-    response = await _get_client().chat.completions.create(
-        model=os.getenv("GROQ_MODEL", "openai/gpt-oss-20b"),
-        messages=[{"role": "system", "content": _system_prompt()}, {"role": "user", "content": mensagem}],
-        temperature=0,
-        max_tokens=150,
-        response_format={
-            "type": "json_schema",
-            "json_schema": {
-                "name": "agendamento_extraido",
-                "strict": True,
-                "schema": {
-                    "type": "object",
-                    "properties": {
-                        "intencao": {"type": "string", "enum": ["agendar", "cancelar", "desconhecido"]},
-                        "paciente": {"type": ["string", "null"]},
-                        "data": {"type": ["string", "null"]},
-                        "hora": {"type": ["string", "null"]},
-                        "erro": {"type": ["string", "null"]},
+    try:
+        client = _get_client()
+    except RuntimeError as exc:
+        return AgendamentoExtraido(intencao="desconhecido", erro=str(exc))
+
+    try:
+        response = await client.chat.completions.create(
+            model=os.getenv("GROQ_MODEL", "openai/gpt-oss-20b"),
+            messages=[{"role": "system", "content": _system_prompt()}, {"role": "user", "content": mensagem}],
+            temperature=0,
+            max_tokens=150,
+            response_format={
+                "type": "json_schema",
+                "json_schema": {
+                    "name": "agendamento_extraido",
+                    "strict": True,
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "intencao": {"type": "string", "enum": ["agendar", "cancelar", "desconhecido"]},
+                            "paciente": {"type": ["string", "null"]},
+                            "data": {"type": ["string", "null"]},
+                            "hora": {"type": ["string", "null"]},
+                            "erro": {"type": ["string", "null"]},
+                        },
+                        "required": ["intencao", "paciente", "data", "hora", "erro"],
+                        "additionalProperties": False,
                     },
-                    "required": ["intencao", "paciente", "data", "hora", "erro"],
-                    "additionalProperties": False,
                 },
             },
-        },
-    )
-    content = response.choices[0].message.content or "{}"
-    return AgendamentoExtraido.model_validate_json(content)
+        )
+    except Exception as exc:
+        return AgendamentoExtraido(intencao="desconhecido", erro=f"Falha no provedor de IA: {type(exc).__name__}")
+
+    try:
+        if not response.choices:
+            return AgendamentoExtraido(intencao="desconhecido", erro="Resposta vazia do provedor de IA.")
+        content = response.choices[0].message.content or "{}"
+        return AgendamentoExtraido.model_validate_json(content)
+    except Exception:
+        return AgendamentoExtraido(intencao="desconhecido", erro="Resposta inválida do provedor de IA.")

@@ -7,6 +7,20 @@ const pacienteService = require("./pacienteService.js");
 const agendamentoService = require("./agendamentoService.js");
 const config = require("../config.js");
 
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+function validarDadosAgendamento({ paciente, data, hora }) {
+  if (!paciente || !data || !hora) return false;
+  if (!DATE_RE.test(data) || !TIME_RE.test(hora)) return false;
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  const dataObj = new Date(`${data}T00:00:00`);
+  if (Number.isNaN(dataObj.getTime()) || dataObj < hoje) return false;
+  if (!agendamentoService.getPossibleTimes().includes(hora)) return false;
+  return true;
+}
+
 /**
  * @typedef {Object} ResultadoBooking
  * @property {boolean} sucesso
@@ -21,11 +35,11 @@ const config = require("../config.js");
 async function criarAgendamento(dados) {
   const { paciente, data, hora } = dados;
 
-  if (!paciente || !data || !hora) {
+  if (!validarDadosAgendamento(dados)) {
     return {
       sucesso: false,
       mensagemResposta:
-        "Não entendi completamente. Tente: *paciente Nome dia_da_semana hora*.\nEx: paciente João segunda 14h",
+        "Não entendi completamente ou a data/hora é inválida. Tente: *paciente Nome dia_da_semana hora*.\nEx: paciente João segunda 14h",
     };
   }
 
@@ -87,11 +101,11 @@ async function criarAgendamento(dados) {
 async function cancelarAgendamento(dados) {
   const { paciente, data, hora } = dados;
 
-  if (!paciente || !data || !hora) {
+  if (!validarDadosAgendamento(dados)) {
     return {
       sucesso: false,
       mensagemResposta:
-        "Para cancelar, informe: *cancela Nome dia_da_semana hora*.\nEx: cancela João segunda 14h",
+        "Para cancelar, informe: *cancela Nome dia_da_semana hora* com data/hora válidas.\nEx: cancela João segunda 14h",
     };
   }
 
@@ -116,8 +130,8 @@ async function cancelarAgendamento(dados) {
 
   const [agendamentos] = await require("../../database.js").query(
     `SELECT id FROM agendamentos
-     WHERE paciente_id = ? AND data_hora = ? AND status != 'Cancelado'`,
-    [pacienteEncontrado.id, dataHoraISO]
+     WHERE paciente_id = ? AND data_hora = ? AND profissional_id = ? AND status != 'Cancelado'`,
+    [pacienteEncontrado.id, dataHoraISO, config.WHATSAPP_PROFESSIONAL_ID]
   );
 
   if (agendamentos.length === 0) {
@@ -127,7 +141,7 @@ async function cancelarAgendamento(dados) {
     };
   }
 
-  await agendamentoService.cancel(agendamentos[0].id);
+  await agendamentoService.cancel(agendamentos[0].id, config.WHATSAPP_PROFESSIONAL_ID);
 
   return {
     sucesso: true,

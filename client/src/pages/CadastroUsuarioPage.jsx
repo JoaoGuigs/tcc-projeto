@@ -1,6 +1,6 @@
 // client/src/pages/CadastroUsuarioPage.jsx
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import api from '../services/api';
 import { Box, Typography, TextField, Button, Container, Alert, Snackbar } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
@@ -18,6 +18,8 @@ function CadastroUsuarioPage() {
 
     const [error, setError] = useState('');
     const navigate = useNavigate();
+    const timerRef = useRef(null);
+    useEffect(() => () => { if (timerRef.current) clearTimeout(timerRef.current); }, []);
     const [snackbar, setSnackbar] = useState({
         open: false,
         message: "",
@@ -51,6 +53,10 @@ function CadastroUsuarioPage() {
             setError('Todos os campos são obrigatórios.');
             return;
         }
+        if (String(formData.senha).length < 8) {
+            setError('A senha deve ter pelo menos 8 caracteres.');
+            return;
+        }
 
         try {
             // Chama a rota que cria um USUÁRIO + PROFISSIONAL
@@ -62,13 +68,18 @@ function CadastroUsuarioPage() {
             setError('');
 
             // Redireciona para a página de login após 2 segundos
-            setTimeout(() => {
+            timerRef.current = setTimeout(() => {
                 navigate('/');
             }, 2000);
 
         } catch (err) {
             const errorMessage = err.userMessage || 'Ocorreu um erro ao cadastrar.';
-            showSnackbar(errorMessage, 'error');
+            if (err?.response?.status === 401) {
+                setError('Cadastro restrito: já existe um profissional cadastrado. Faça login para criar novas contas.');
+                showSnackbar('Cadastro restrito a usuários autenticados.', 'error');
+            } else {
+                showSnackbar(errorMessage, 'error');
+            }
         }
     };
 

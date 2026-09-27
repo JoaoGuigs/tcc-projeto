@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 import api from "../services/api";
+import { formatPhone } from "../utils/phone";
+import { toPatientPayload, validatePatient } from "../lib/patientSchema";
 import {
   Box,
   TextField,
@@ -77,29 +79,11 @@ function PacienteCadastroPage() {
     }
   };
 
-  // Formata o telefone conforme o usuário digita: (DD) 9xxxx-xxxx ou (DD) xxxx-xxxx
+  // Formata o telefone usando util compartilhado (suporta DDI 55 opcional).
   const handlePhoneChange = (event) => {
-    const raw = event.target.value || "";
-    // Remove tudo que não for dígito
-    const digits = raw.replace(/\D/g, "");
-
-    let formatted = digits;
-    if (digits.length <= 2) {
-      formatted = digits;
-    } else if (digits.length <= 6) {
-      // (DD) xxxx
-      formatted = `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
-    } else if (digits.length <= 10) {
-      // (DD) xxxx-xxxx
-      formatted = `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
-    } else {
-      // (DD) 9xxxx-xxxx (11 digits)
-      formatted = `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7, 11)}`;
-    }
-
     setFormData((prevState) => ({
       ...prevState,
-      celular: formatted,
+      celular: formatPhone(event.target.value || ""),
     }));
   };
   // Função para enviar o formulário
@@ -110,37 +94,18 @@ function PacienteCadastroPage() {
       celular: "",
     });
 
-    let hasErrors = false;
-    const newErrors = {
-      nome_completo: "",
-      celular: "",
-    };
-
-    if (!formData.nome_completo) {
-      newErrors.nome_completo = "O nome completo é obrigatório";
-      hasErrors = true;
-    } else if (formData.nome_completo.length < 3) {
-      newErrors.nome_completo = "O nome deve ter pelo menos 3 caracteres";
-      hasErrors = true;
-    }
-
-    if (!formData.celular || String(formData.celular).trim() === '') {
-      newErrors.celular = "O número de celular é obrigatório";
-      hasErrors = true;
-    } else if (formData.celular.replace(/\D/g, '').length < 10) {
-      newErrors.celular = "Digite um número de celular válido com DDD";
-      hasErrors = true;
-    }
-
-    if (hasErrors) {
-      setErrors(newErrors);
+    const validation = validatePatient(formData);
+    if (!validation.ok) {
+      setErrors({
+        nome_completo: validation.errors.nome_completo || "",
+        celular: validation.errors.celular || "",
+      });
       return;
     }
 
     try {
-      // Envia os dados para a rota do backend que já fizemos
-      // Normaliza celular para dígitos apenas antes de enviar
-      const payload = { ...formData, celular: String(formData.celular || '').replace(/\D/g, '') };
+      // Payload normalizado via schema compartilhado (preserva DDI se informado)
+      const payload = toPatientPayload(formData);
       await api.post("/pacientes", payload);
       showSnackbar("Paciente cadastrado com sucesso!", "success");
       // Limpa o formulário

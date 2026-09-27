@@ -3,13 +3,19 @@ const config = require("../config");
 const { enqueue, processEvent } = require("../services/whatsappEventService");
 const chat = require("../services/whatsappChatService");
 
+function fallbackMessageId(numero, texto) {
+  // Bucket por minuto: evita descartar repetição legítima ("teste" 2x) mas ainda dedupa retry imediato.
+  const bucket = new Date().toISOString().slice(0, 16);
+  return crypto.createHash("sha256").update(`${numero}:${texto}:${bucket}`).digest("hex");
+}
+
 function extractEvolutionMessage(body) {
   const data = body?.data || body;
   const remoteJid = data?.key?.remoteJid || "";
   const numero = remoteJid.replace("@s.whatsapp.net", "").replace(/\D/g, "");
   const texto = data?.message?.conversation || data?.message?.extendedTextMessage?.text || "";
   const rawId = data?.key?.id;
-  const messageId = rawId || crypto.createHash("sha256").update(`${remoteJid}:${texto}`).digest("hex");
+  const messageId = rawId || fallbackMessageId(numero || remoteJid, texto);
   return { numero, texto: texto.trim(), messageId, remoteJid, fromMe: data?.key?.fromMe === true };
 }
 
@@ -28,7 +34,7 @@ function extractMetaMessages(body) {
           messages.push({
             numero,
             texto: texto.trim(),
-            messageId: message.id || crypto.createHash("sha256").update(`${numero}:${texto}`).digest("hex"),
+            messageId: message.id || fallbackMessageId(numero, texto),
             remoteJid: numero,
             fromMe: false,
           });

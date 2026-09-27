@@ -1,6 +1,6 @@
 import { ArrowRight, CalendarCheck, Eye, EyeOff, HeartPulse, MessageCircleMore } from "lucide-react";
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import { Button } from "../components/ui/button";
 
@@ -13,6 +13,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
 
   async function handleLogin(event) {
@@ -25,7 +26,8 @@ export default function LoginPage() {
     setError("");
     try {
       await login({ email: email.trim(), senha });
-      navigate("/home", { replace: true });
+      const from = location.state?.from?.pathname || "/home";
+      navigate(from, { replace: true });
     } catch (loginError) {
       setError(loginError.userMessage || "Email ou senha inválidos.");
     } finally {

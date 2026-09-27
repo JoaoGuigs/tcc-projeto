@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo } from "react";
+import { Fragment, memo, useEffect, useMemo } from "react";
 import { Link, useOutletContext } from "react-router-dom";
 import {
   ArrowRight,
@@ -69,7 +69,7 @@ function StatusPill({ status, hasAtendimento }) {
   );
 }
 
-function AgendaRow({ appointment }) {
+const AgendaRow = memo(function AgendaRow({ appointment }) {
   const hasAtendimento = Boolean(appointment.atendimento_id);
   return (
     <Link
@@ -94,9 +94,9 @@ function AgendaRow({ appointment }) {
       <ArrowRight size={16} className="hidden text-muted transition-transform group-hover:translate-x-0.5 sm:block" />
     </Link>
   );
-}
+});
 
-function AvailableRow({ time, date }) {
+const AvailableRow = memo(function AvailableRow({ time, date }) {
   return (
     <Link
       to={`/agendar?data=${date}&horario=${encodeURIComponent(time)}`}
@@ -111,9 +111,9 @@ function AvailableRow({ time, date }) {
       <Plus size={16} className="hidden text-primary transition-transform group-hover:rotate-90 sm:block" />
     </Link>
   );
-}
+});
 
-function UnavailableRow({ time, past = false }) {
+const UnavailableRow = memo(function UnavailableRow({ time, past = false }) {
   return (
     <div className="grid min-h-[70px] grid-cols-[58px_minmax(0,1fr)] items-center gap-3 rounded-[16px] bg-canvas px-3.5 py-2.5 sm:grid-cols-[70px_minmax(0,1fr)_auto_20px] sm:px-4">
       <span className="font-display text-[18px] font-semibold leading-none text-muted">{time}</span>
@@ -124,7 +124,7 @@ function UnavailableRow({ time, past = false }) {
       <span className="hidden rounded-full bg-white px-3 py-1.5 text-xs font-bold text-muted sm:inline-flex">{past ? "Encerrado" : "Indisponível"}</span>
     </div>
   );
-}
+});
 
 const metricStyles = {
   success: { icon: "bg-success-soft text-primary", value: "text-primary" },
@@ -245,14 +245,14 @@ export default function HomePage() {
 
   const confirmed = appointments.filter((item) => /confirm/i.test(item.status || "")).length;
   const waiting = appointments.filter(
-    (item) => !/confirm/i.test(item.status || "") && !item.atendimento_id,
+    (item) => (item.status || "Agendado") === "Agendado" && !item.atendimento_id,
   ).length;
   const completed = appointments.filter((item) => Boolean(item.atendimento_id)).length;
   const total = appointments.length;
   const progress = total ? Math.round((completed / total) * 100) : 0;
 
   const waitingAppointment = appointments.find(
-    (item) => !item.atendimento_id && !/confirm|chegou/i.test(item.status || ""),
+    (item) => !item.atendimento_id && (item.status || "Agendado") === "Agendado",
   );
   const readyForRecord = appointments.find(
     (item) => !item.atendimento_id && /confirm|chegou/i.test(item.status || "") && dayjs(item.data_hora).isBefore(dayjs()),

@@ -3,7 +3,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Check, UserRound, X } from "lucide-react";
 import api from "../services/api";
 import { useConvenios } from "../hooks/useConvenios";
-import { formatPhone, onlyDigits } from "../utils/phone";
+import { formatPhone } from "../utils/phone";
+import { toPatientPayload, validatePatient } from "../lib/patientSchema";
 import { PrettySelect } from "./ui/select";
 
 const EMPTY = {
@@ -19,13 +20,13 @@ const inputClass =
   "h-[46px] w-full rounded-[12px] border border-solid border-border bg-canvas px-4 text-[15px] text-ink outline-none placeholder:text-muted focus:border-primary";
 const inputErrorClass = "border-[#C62828] focus:border-[#C62828]";
 
-function Field({ label, error, hint, children }) {
+function Field({ label, error, hint, children, fieldId }) {
   return (
-    <label className="flex flex-col gap-[6px]">
+    <label className="flex flex-col gap-[6px]" htmlFor={fieldId}>
       <span className="text-sm font-semibold leading-[18px] text-ink">{label}</span>
       {children}
       {error ? (
-        <span className="text-xs leading-[16px] text-[#C62828]">{error}</span>
+        <span id={`${fieldId}-error`} role="alert" className="text-xs leading-[16px] text-[#C62828]">{error}</span>
       ) : hint ? (
         <span className="text-xs leading-[16px] text-muted">{hint}</span>
       ) : null}
@@ -35,7 +36,7 @@ function Field({ label, error, hint, children }) {
 
 export function NewPatientModal({ open, onClose, onCreated }) {
   const queryClient = useQueryClient();
-  const { data: convenios = [] } = useConvenios();
+  const { data: convenios = [] } = useConvenios(Boolean(open));
   const [form, setForm] = useState(EMPTY);
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState("");
@@ -71,31 +72,18 @@ export function NewPatientModal({ open, onClose, onCreated }) {
 
   async function handleSubmit(event) {
     event.preventDefault();
-    const nextErrors = {};
-    const nome = form.nome_completo.trim();
-    const digits = onlyDigits(form.celular);
-
-    if (nome.length < 5) nextErrors.nome_completo = "Informe o nome completo (mínimo 5 letras)";
-    else if (!nome.includes(" ")) nextErrors.nome_completo = "Informe nome e sobrenome";
-    if (digits.length < 10) nextErrors.celular = "Informe DDD e número de celular";
-
-    if (Object.keys(nextErrors).length > 0) {
-      setErrors(nextErrors);
+    const validation = validatePatient(form);
+    if (!validation.ok) {
+      setErrors(validation.errors);
       return;
     }
 
     setSaving(true);
     try {
-      const response = await api.post("/pacientes", {
-        nome_completo: nome,
-        celular: digits,
-        convenio_id: form.convenio_id ? Number(form.convenio_id) : null,
-        numero_carteirinha: form.numero_carteirinha.trim() || null,
-        descricao_problema: form.descricao_problema.trim() || null,
-        profissao: form.profissao.trim() || null,
-      });
+      const payload = toPatientPayload(form);
+      const response = await api.post("/pacientes", payload);
       await queryClient.invalidateQueries({ queryKey: ["pacientes"] });
-      const patient = { id: response.data?.id, nome_completo: nome };
+      const patient = { id: response.data?.id, nome_completo: payload.nome_completo };
       setCreated(patient);
       onCreated?.(patient);
     } catch (err) {
@@ -155,30 +143,36 @@ export function NewPatientModal({ open, onClose, onCreated }) {
             </div>
           </div>
         ) : (
-          <form className="mt-[18px] flex flex-col gap-[14px]" onSubmit={handleSubmit}>
-            <Field label="Nome completo" error={errors.nome_completo}>
+          <form className="mt-[18px] flex flex-col gap-[14px]" onSubmit={handleSubmit} noValidate>
+            <Field label="Nome completo" error={errors.nome_completo} fieldId="new-patient-nome">
               <input
+                id="new-patient-nome"
                 name="nome_completo"
                 value={form.nome_completo}
                 onChange={(event) => setField("nome_completo", event.target.value)}
                 placeholder="Ex.: Maria Oliveira"
                 maxLength={180}
                 autoFocus
+                aria-invalid={Boolean(errors.nome_completo)}
+                aria-describedby={errors.nome_completo ? "new-patient-nome-error" : undefined}
                 className={`${inputClass} ${errors.nome_completo ? inputErrorClass : ""}`}
               />
             </Field>
 
             <div className="grid gap-[14px] sm:grid-cols-2">
-              <Field label="Celular" error={errors.celular} hint="DDD + número">
+              <Field label="Celular" error={errors.celular} hint="DDD + número" fieldId="new-patient-celular">
                 <input
+                  id="new-patient-celular"
                   name="celular"
                   value={form.celular}
                   onChange={(event) => setField("celular", formatPhone(event.target.value))}
                   placeholder="(48) 99999-0000"
                   inputMode="tel"
+                  aria-invalid={Boolean(errors.celular)}
+                  aria-describedby={errors.celular ? "new-patient-celular-error" : undefined}
                   className={`${inputClass} ${errors.celular ? inputErrorClass : ""}`}
                 />
-              </Field>
+                </Field>
               <Field label="Profissão">
                 <input
                   name="profissao"

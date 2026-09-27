@@ -30,7 +30,7 @@ const getAllPacientes = async (req, res) => {
     if (nomeQuery && nomeQuery.trim().length < 3) {
         return res.status(200).json([]);
     }
-    const pacientes = await pacienteService.getAll(nomeQuery); // 2. Passa para o service
+    const pacientes = await pacienteService.getAll(nomeQuery, req.query.limite, req.query.offset);
     res.status(200).json(pacientes);
   } catch (error) {
     console.error("erro no controller ao buscar todos Pacientes", error);

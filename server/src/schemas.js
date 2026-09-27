@@ -24,7 +24,11 @@ module.exports = {
     descricao_problema: optionalText,
     profissao: z.string().trim().max(120).optional().nullable(),
   }),
-  patientQuery: z.object({ nome: z.string().trim().min(3).max(100).optional() }),
+  patientQuery: z.object({
+    nome: z.string().trim().min(3).max(100).optional(),
+    limite: z.coerce.number().int().min(1).max(500).default(500),
+    offset: z.coerce.number().int().min(0).max(10000).default(0),
+  }),
   appointmentQuery: z.object({
     pacienteId: id.optional(), dataInicio: date.optional(), dataFim: date.optional(),
     semAtendimento: z.enum(["true", "false", "1", "0"]).optional(),

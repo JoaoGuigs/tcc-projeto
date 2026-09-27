@@ -10,7 +10,7 @@ def test_agenda_amanha_sem_chamar_modelo():
     result = parse_local("paciente João da Silva amanhã 14h", NOW)
     assert result is not None
     assert result.model_dump() == {
-        "intencao": "agendar", "paciente": "João Da Silva",
+        "intencao": "agendar", "paciente": "João da Silva",
         "data": "2026-09-15", "hora": "14:00", "erro": None,
     }
 

@@ -1,9 +1,6 @@
-import dayjs from "dayjs";
-import "dayjs/locale/pt-br";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
-import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
-import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { cn } from "../../lib/utils";
+import dayjs from "../../lib/dayjs";
 
 /**
  * Date/Month pickers bonitos no padrão FisioCare.
@@ -86,25 +83,23 @@ export function PrettyDatePicker({
 }) {
   return (
     <span className={cn("block w-full", wrapperClassName)}>
-      <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="pt-br">
-        <DatePicker
-          value={toDayjsDate(value)}
-          onChange={(next) => onChange?.(!next || !next.isValid() ? "" : next.format("YYYY-MM-DD"))}
-          minDate={min ? dayjs(min, "YYYY-MM-DD") : undefined}
-          maxDate={max ? dayjs(max, "YYYY-MM-DD") : undefined}
-          format="DD/MM/YYYY"
-          disabled={disabled}
-          slotProps={{
-            textField: {
-              fullWidth: true,
-              sx: fieldSx,
-              inputProps: { inputMode: "numeric", "aria-label": rest["aria-label"] || "Data" },
-            },
-            popper: { sx: popperSx },
-          }}
-          {...rest}
-        />
-      </LocalizationProvider>
+      <DatePicker
+        value={toDayjsDate(value)}
+        onChange={(next) => onChange?.(!next || !next.isValid() ? "" : next.format("YYYY-MM-DD"))}
+        minDate={min ? dayjs(min, "YYYY-MM-DD") : undefined}
+        maxDate={max ? dayjs(max, "YYYY-MM-DD") : undefined}
+        format="DD/MM/YYYY"
+        disabled={disabled}
+        slotProps={{
+          textField: {
+            fullWidth: true,
+            sx: fieldSx,
+            inputProps: { inputMode: "numeric", "aria-label": rest["aria-label"] || "Data" },
+          },
+          popper: { sx: popperSx },
+        }}
+        {...rest}
+      />
     </span>
   );
 }
@@ -118,25 +113,23 @@ export function PrettyMonthPicker({
 }) {
   return (
     <span className={cn("block w-full", wrapperClassName)}>
-      <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="pt-br">
-        <DatePicker
-          views={["year", "month"]}
-          openTo="month"
-          value={toDayjsMonth(value)}
-          onChange={(next) => onChange?.(!next || !next.isValid() ? "" : next.format("YYYY-MM"))}
-          format="MM/YYYY"
-          disabled={disabled}
-          slotProps={{
-            textField: {
-              fullWidth: true,
-              sx: fieldSx,
-              inputProps: { inputMode: "numeric", "aria-label": rest["aria-label"] || "Mês" },
-            },
-            popper: { sx: popperSx },
-          }}
-          {...rest}
-        />
-      </LocalizationProvider>
+      <DatePicker
+        views={["year", "month"]}
+        openTo="month"
+        value={toDayjsMonth(value)}
+        onChange={(next) => onChange?.(!next || !next.isValid() ? "" : next.format("YYYY-MM"))}
+        format="MM/YYYY"
+        disabled={disabled}
+        slotProps={{
+          textField: {
+            fullWidth: true,
+            sx: fieldSx,
+            inputProps: { inputMode: "numeric", "aria-label": rest["aria-label"] || "Mês" },
+          },
+          popper: { sx: popperSx },
+        }}
+        {...rest}
+      />
     </span>
   );
 }

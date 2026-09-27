@@ -37,7 +37,7 @@ def _extract_date(normalized: str, today: date) -> date | None:
         if re.search(rf"\b{re.escape(label)}\b", normalized):
             delta = (weekday - today.weekday()) % 7 or 7
             if "semana que vem" in normalized:
-                delta += 7 if delta <= 7 else 0
+                delta += 7
             return today + timedelta(days=delta)
     return None
 
@@ -49,7 +49,7 @@ def _extract_time(normalized: str) -> str | None:
     if not match:
         return None
     hour = int(match.group(1))
-    minute = int(match.group(2) or 0) if len(match.groups()) > 1 else 0
+    minute = int(match.group(2) or 0)
     if "da tarde" in normalized and hour < 12:
         hour += 12
     return f"{hour:02d}:{minute:02d}"
@@ -62,7 +62,13 @@ def _extract_name(message: str) -> str | None:
     value = re.sub(r"\b(?:às|as|a)?\s*\d{1,2}(?:h|:)\d{0,2}\b|\b(?:às|as|a)\s+\d{1,2}(?:\s*horas?)?\b", " ", value, flags=re.I)
     value = re.sub(r"\b(da manhã|da manha|da tarde|da noite|para|de)\b", " ", value, flags=re.I)
     value = " ".join(value.split()).strip(" ,.-")
-    return value.title() if len(value) >= 2 else None
+    if len(value) < 2:
+        return None
+    titled = value.title()
+    # Mantém preposições em minúsculas (João da Silva, Maria das Dores)
+    for prep in (" Da ", " De ", " Do ", " Das ", " Dos ", " E "):
+        titled = titled.replace(prep, prep.lower())
+    return titled
 
 
 def parse_local(message: str, now: datetime | None = None) -> AgendamentoExtraido | None:
