@@ -6,9 +6,10 @@ const { receberMensagem, isMetaWebhook } = require("../controllers/whatsappContr
 const router = express.Router();
 
 function safeEqual(receivedValue, expectedValue) {
-  const received = Buffer.from(receivedValue || "");
-  const expected = Buffer.from(expectedValue || "");
-  return received.length === expected.length && crypto.timingSafeEqual(received, expected);
+  // Compara hashes SHA-256 para ter tamanho constante e evitar vazar tamanho via timing.
+  const receivedHash = crypto.createHash("sha256").update(String(receivedValue || "")).digest();
+  const expectedHash = crypto.createHash("sha256").update(String(expectedValue || "")).digest();
+  return crypto.timingSafeEqual(receivedHash, expectedHash);
 }
 
 function verifyEvolutionSecret(req, res, next) {

@@ -2,8 +2,9 @@ const db = require("../../database");
 
 async function create({ nome_completo, celular, convenio_id, numero_carteirinha, descricao_problema, profissao }) {
   const normalizedPhone = String(celular).replace(/\D/g, "");
-  if (!/^\d{10,11}$/.test(normalizedPhone)) {
-    const error = new Error("Número de celular inválido. Informe DDD e número.");
+  // Aceita 10 (DDD+8), 11 (DDD+9) e 12-13 com DDI (ex.: 55+DDD+numero). Preserva DDI quando informado.
+  if (!/^\d{10,13}$/.test(normalizedPhone)) {
+    const error = new Error("Número de celular inválido. Informe DDD e número (com DDI 55 opcional).");
     error.statusCode = 400;
     throw error;
   }
@@ -25,7 +26,7 @@ async function create({ nome_completo, celular, convenio_id, numero_carteirinha,
   }
 }
 
-async function getAll(nomeQuery) {
+function buildPatientQuery(nomeQuery, limite = 500, offset = 0) {
   const params = [];
   let sql = `SELECT p.id, p.nome_completo, p.celular, p.convenio_id, p.numero_carteirinha,
     p.descricao_problema, p.profissao, c.nome_convenio
@@ -33,8 +34,18 @@ async function getAll(nomeQuery) {
   if (nomeQuery) {
     sql += " WHERE p.nome_completo LIKE ?";
     params.push(`${nomeQuery}%`);
+    sql += " ORDER BY p.nome_completo LIMIT 10";
+    return { sql, params };
   }
-  sql += nomeQuery ? " ORDER BY p.nome_completo LIMIT 10" : " ORDER BY p.nome_completo LIMIT 500";
+  const lim = Math.min(Math.max(Number(limite) || 500, 1), 500);
+  const off = Math.max(Number(offset) || 0, 0);
+  sql += " ORDER BY p.nome_completo LIMIT ? OFFSET ?";
+  params.push(lim, off);
+  return { sql, params };
+}
+
+async function getAll(nomeQuery, limite = 500, offset = 0) {
+  const { sql, params } = buildPatientQuery(nomeQuery, limite, offset);
   const [rows] = await db.query(sql, params);
   return rows;
 }
@@ -49,4 +60,4 @@ async function getById(id) {
   return rows[0] || null;
 }
 
-module.exports = { create, getAll, getById };
+module.exports = { buildPatientQuery, create, getAll, getById };

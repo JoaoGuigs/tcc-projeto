@@ -17,7 +17,53 @@ const ignorableMigrationErrors = new Set([
   "ER_DUP_FIELDNAME",
   "ER_DUP_KEYNAME",
   "ER_FK_DUP_NAME",
+  "ER_CHECK_CONSTRAINT_DUP_NAME",
+  "ER_DUP_CONSTRAINT_NAME",
 ]);
+
+function splitSqlStatements(sql) {
+  const statements = [];
+  let current = "";
+  let single = false;
+  let double = false;
+  let backtick = false;
+  let lineComment = false;
+  let blockComment = false;
+  for (let i = 0; i < sql.length; i += 1) {
+    const char = sql[i];
+    const next = sql[i + 1] || "";
+    if (lineComment) {
+      current += char;
+      if (char === "\n") lineComment = false;
+      continue;
+    }
+    if (blockComment) {
+      current += char;
+      if (char === "*" && next === "/") {
+        current += next;
+        i += 1;
+        blockComment = false;
+      }
+      continue;
+    }
+    if (!single && !double && !backtick) {
+      if (char === "-" && next === "-") { lineComment = true; current += char; continue; }
+      if (char === "#") { lineComment = true; current += char; continue; }
+      if (char === "/" && next === "*") { blockComment = true; current += char + next; i += 1; continue; }
+    }
+    if (char === "'" && !double && !backtick && sql[i - 1] !== "\\") single = !single;
+    else if (char === '"' && !single && !backtick && sql[i - 1] !== "\\") double = !double;
+    else if (char === "`" && !single && !double) backtick = !backtick;
+    if (char === ";" && !single && !double && !backtick) {
+      if (current.trim()) statements.push(current.trim());
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  if (current.trim()) statements.push(current.trim());
+  return statements;
+}
 
 async function ensureTestDatabase(config) {
   if (!/^[a-zA-Z0-9_]+$/.test(config.DB_NAME) || !config.DB_NAME.endsWith("_test")) {
@@ -65,7 +111,7 @@ async function ensureTestDatabase(config) {
       if (applied.length) continue;
 
       const sql = await fs.readFile(path.join(migrationsDirectory, name), "utf8");
-      const statements = sql.split(";").map((statement) => statement.trim()).filter(Boolean);
+      const statements = splitSqlStatements(sql).map((statement) => statement.trim()).filter(Boolean);
       for (const statement of statements) {
         try {
           await connection.query(statement);

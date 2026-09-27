@@ -27,45 +27,61 @@ async function marcarLidas(numero) {
 }
 
 async function resolverPaciente(numero) {
-  const [pacientes] = await db.query("SELECT id, nome_completo, celular FROM pacientes");
   const digits = normalize(numero);
+  if (!digits) return null;
   const tail11 = digits.slice(-11);
   const tail10 = digits.slice(-10);
-  const match = pacientes.find((paciente) => {
+  const [candidatos] = await db.query(
+    "SELECT id, nome_completo, celular FROM pacientes WHERE celular LIKE ? OR celular LIKE ? LIMIT 20",
+    [`%${tail11}`, `%${tail10}`],
+  );
+  const match = candidatos.find((paciente) => {
     const celular = normalize(paciente.celular);
-    return (celular.length === 11 && celular === tail11) || (celular.length === 10 && celular === tail10);
+    return celular.endsWith(tail11) || celular.endsWith(tail10);
   });
   return match ? { id: match.id, nome_completo: match.nome_completo } : null;
 }
 
-async function listarConversas() {
-  const [rows] = await db.query(
-    `SELECT numero, direcao, texto, status, erro, lida, criado_em
-     FROM whatsapp_mensagens ORDER BY criado_em DESC LIMIT 500`,
+async function listarConversas(limite = 50, offset = 0) {
+  const limit = Math.min(Math.max(Number(limite) || 50, 1), 200);
+  const off = Math.max(Number(offset) || 0, 0);
+  const [agregado] = await db.query(
+    `SELECT numero, MAX(criado_em) AS ultima_em, COUNT(*) AS total,
+       SUM(direcao = 'entrada' AND lida = 0) AS nao_lidas
+     FROM whatsapp_mensagens GROUP BY numero ORDER BY ultima_em DESC LIMIT ? OFFSET ?`,
+    [limit, off],
   );
+  if (!agregado.length) return [];
 
-  const porNumero = new Map();
-  for (const row of rows) {
-    if (!porNumero.has(row.numero)) porNumero.set(row.numero, []);
-    porNumero.get(row.numero).push(row);
-  }
+  const [ultimas] = await db.query(
+    `SELECT m.numero, m.direcao, m.texto, m.criado_em FROM whatsapp_mensagens m
+     INNER JOIN (SELECT numero, MAX(criado_em) AS ultima_em FROM whatsapp_mensagens GROUP BY numero) u
+       ON u.numero = m.numero AND u.ultima_em = m.criado_em
+     WHERE m.numero IN (?)`,
+    [agregado.map((row) => row.numero)],
+  );
+  const ultimaPorNumero = new Map(ultimas.map((row) => [row.numero, row]));
 
-  const conversas = [];
-  for (const [numero, mensagens] of porNumero) {
-    const ultima = mensagens[0];
-    conversas.push({
-      numero,
-      paciente: await resolverPaciente(numero),
-      ultimo_texto: ultima.texto,
-      ultima_direcao: ultima.direcao,
-      ultima_em: ultima.criado_em,
-      nao_lidas: mensagens.filter((m) => m.direcao === "entrada" && !m.lida).length,
-      total: mensagens.length,
-    });
-  }
+  const [pacientes] = await db.query("SELECT id, nome_completo, celular FROM pacientes");
+  const porCelular = pacientes.map((p) => ({ id: p.id, nome_completo: p.nome_completo, celular: normalize(p.celular) }));
+  const resolverLocal = (numero) => {
+    const digits = normalize(numero);
+    const found = porCelular.find((p) => p.celular.endsWith(digits.slice(-11)) || p.celular.endsWith(digits.slice(-10)));
+    return found ? { id: found.id, nome_completo: found.nome_completo } : null;
+  };
 
-  conversas.sort((a, b) => new Date(b.ultima_em) - new Date(a.ultima_em));
-  return conversas;
+  return agregado.map((row) => {
+    const ultima = ultimaPorNumero.get(row.numero);
+    return {
+      numero: row.numero,
+      paciente: resolverLocal(row.numero),
+      ultimo_texto: ultima?.texto || "",
+      ultima_direcao: ultima?.direcao || "entrada",
+      ultima_em: row.ultima_em,
+      nao_lidas: Number(row.nao_lidas) || 0,
+      total: Number(row.total) || 0,
+    };
+  }).sort((a, b) => new Date(b.ultima_em) - new Date(a.ultima_em));
 }
 
 async function listarMensagens(numero, limite = 200) {

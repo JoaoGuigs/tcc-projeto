@@ -22,9 +22,16 @@ app.use(express.json({
   },
 }));
 app.use(cookieParser());
+const csrf = require("./src/middleware/csrf");
+app.use(csrf);
 
 const authLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 20, standardHeaders: "draft-8", legacyHeaders: false });
 app.use("/usuarios/login", authLimiter);
+const webhookLimiter = rateLimit({ windowMs: 60 * 1000, limit: 60, standardHeaders: "draft-8", legacyHeaders: false });
+app.use("/webhook/", webhookLimiter);
+const whatsappSendLimiter = rateLimit({ windowMs: 60 * 1000, limit: 30, standardHeaders: "draft-8", legacyHeaders: false });
+app.use("/whatsapp/enviar", whatsappSendLimiter);
+app.use("/whatsapp/enviar-template", whatsappSendLimiter);
 
 app.use("/usuarios", require("./src/routes/usuario"));
 app.use("/webhook", require("./src/routes/whatsapp"));

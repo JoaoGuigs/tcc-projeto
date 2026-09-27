@@ -10,11 +10,20 @@ const getAll = async () => {
 
 const create = async (convenioData) => {
   const { nome_convenio } = convenioData;
-  const [result] = await db.query(
-    "INSERT INTO convenios (nome_convenio) VALUES (?)",
-    [nome_convenio]
-  );
-  return { id: result.insertId, nome_convenio };
+  try {
+    const [result] = await db.query(
+      "INSERT INTO convenios (nome_convenio) VALUES (?)",
+      [nome_convenio]
+    );
+    return { id: result.insertId, nome_convenio };
+  } catch (error) {
+    if (error.code === "ER_DUP_ENTRY") {
+      const conflict = new Error("Já existe um convênio com este nome.");
+      conflict.statusCode = 409;
+      throw conflict;
+    }
+    throw error;
+  }
 };
 
 const deleteById = async (id) => {
@@ -25,7 +34,9 @@ const deleteById = async (id) => {
   );
   
   if (pacientes[0].total > 0) {
-    throw new Error(`Este convênio está sendo usado por ${pacientes[0].total} paciente(s) e não pode ser deletado. Primeiro remova ou altere o convênio destes pacientes.`);
+    const error = new Error(`Este convênio está sendo usado por ${pacientes[0].total} paciente(s) e não pode ser deletado. Primeiro remova ou altere o convênio destes pacientes.`);
+    error.statusCode = 409;
+    throw error;
   }
   
   // Se não está sendo usado, pode deletar
@@ -35,7 +46,9 @@ const deleteById = async (id) => {
   );
   
   if (result.affectedRows === 0) {
-    throw new Error("Convênio não encontrado");
+    const notFound = new Error("Convênio não encontrado");
+    notFound.statusCode = 404;
+    throw notFound;
   }
   
   return result;

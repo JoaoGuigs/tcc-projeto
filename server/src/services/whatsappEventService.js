@@ -38,10 +38,8 @@ async function processEvent(id) {
       status: "enviada",
       messageId: obterMessageId(providerResult),
     });
-    await chat.atualizarStatusPorMessageId(event.message_id, "concluido");
     await db.query("UPDATE whatsapp_eventos SET status = 'concluido', ultimo_erro = NULL WHERE id = ?", [id]);
   } catch (error) {
-    await chat.atualizarStatusPorMessageId(event.message_id, "falhou", String(error.message).slice(0, 1000));
     await db.query("UPDATE whatsapp_eventos SET status = 'falhou', ultimo_erro = ? WHERE id = ?", [String(error.message).slice(0, 1000), id]);
     throw error;
   }

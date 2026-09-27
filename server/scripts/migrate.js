@@ -5,7 +5,57 @@ const path = require("node:path");
 const mysql = require("mysql2/promise");
 const config = require("../src/config");
 
-const ignorableCodes = new Set(["ER_DUP_FIELDNAME", "ER_DUP_KEYNAME", "ER_FK_DUP_NAME"]);
+const ignorableCodes = new Set([
+  "ER_DUP_FIELDNAME",
+  "ER_DUP_KEYNAME",
+  "ER_FK_DUP_NAME",
+  "ER_CHECK_CONSTRAINT_DUP_NAME",
+  "ER_DUP_CONSTRAINT_NAME",
+]);
+
+function splitSqlStatements(sql) {
+  const statements = [];
+  let current = "";
+  let single = false;
+  let double = false;
+  let backtick = false;
+  let lineComment = false;
+  let blockComment = false;
+  for (let i = 0; i < sql.length; i += 1) {
+    const char = sql[i];
+    const next = sql[i + 1] || "";
+    if (lineComment) {
+      current += char;
+      if (char === "\n") lineComment = false;
+      continue;
+    }
+    if (blockComment) {
+      current += char;
+      if (char === "*" && next === "/") {
+        current += next;
+        i += 1;
+        blockComment = false;
+      }
+      continue;
+    }
+    if (!single && !double && !backtick) {
+      if (char === "-" && next === "-") { lineComment = true; current += char; continue; }
+      if (char === "#") { lineComment = true; current += char; continue; }
+      if (char === "/" && next === "*") { blockComment = true; current += char + next; i += 1; continue; }
+    }
+    if (char === "'" && !double && !backtick && sql[i - 1] !== "\\") single = !single;
+    else if (char === '"' && !single && !backtick && sql[i - 1] !== "\\") double = !double;
+    else if (char === "`" && !single && !double) backtick = !backtick;
+    if (char === ";" && !single && !double && !backtick) {
+      if (current.trim()) statements.push(current.trim());
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  if (current.trim()) statements.push(current.trim());
+  return statements;
+}
 
 async function tableExists(connection, tableName) {
   const [rows] = await connection.query(
@@ -39,6 +89,10 @@ async function assertNoDuplicates(connection) {
     checks.push(["message_id duplicados em whatsapp_eventos",
       "SELECT message_id AS valor, COUNT(*) AS total FROM whatsapp_eventos GROUP BY message_id HAVING COUNT(*) > 1"]);
   }
+  if (await tableExists(connection, "convenios")) {
+    checks.push(["nomes duplicados em convenios",
+      "SELECT nome_convenio AS valor, COUNT(*) AS total FROM convenios GROUP BY nome_convenio HAVING COUNT(*) > 1"]);
+  }
 
   const problems = [];
   for (const [label, sql] of checks) {
@@ -65,9 +119,9 @@ async function main() {
     for (const name of files) {
       const [existing] = await connection.query("SELECT name FROM schema_migrations WHERE name = ?", [name]);
       if (existing.length) continue;
-      if (name.startsWith("002_")) await assertNoDuplicates(connection);
+      if (name.startsWith("002_") || name.startsWith("005_")) await assertNoDuplicates(connection);
       const sql = await fs.readFile(path.join(migrationsDir, name), "utf8");
-      const statements = sql.split(";").map((statement) => statement.trim()).filter(Boolean);
+      const statements = splitSqlStatements(sql).map((statement) => statement.trim()).filter(Boolean);
       for (const statement of statements) {
         try { await connection.query(statement); }
         catch (error) {

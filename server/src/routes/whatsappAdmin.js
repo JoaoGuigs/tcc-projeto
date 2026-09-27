@@ -11,7 +11,9 @@ const router = express.Router();
 
 router.get("/conversas", async (req, res, next) => {
   try {
-    res.json(await chat.listarConversas());
+    const limite = Math.min(Math.max(Number(req.query.limite) || 50, 1), 200);
+    const offset = Math.max(Number(req.query.offset) || 0, 0);
+    res.json(await chat.listarConversas(limite, offset));
   } catch (error) { next(error); }
 });
 
