@@ -1,5 +1,14 @@
 const db = require("../../database");
 
+const possibleTimes = Object.freeze([
+  "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
+  "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00",
+]);
+
+function getPossibleTimes() {
+  return [...possibleTimes];
+}
+
 function buildAppointmentQuery(dataInicio, dataFim, pacienteId = null, onlyPending = false, limite = 100, professionalId = null) {
   let sql = `
     SELECT ag.id, ag.data_hora, ag.tipo_consulta, ag.paciente_id, ag.status,
@@ -33,10 +42,6 @@ async function getByDateRange(dataInicio, dataFim, pacienteId = null, onlyPendin
 }
 
 async function getAvailableTimesByDate(data, profissionalId) {
-  const possibleTimes = [
-    "08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30",
-    "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00",
-  ];
   const [bookedTimes] = await db.query(
     `SELECT TIME_FORMAT(data_hora, '%H:%i') AS hora FROM agendamentos
      WHERE data_hora >= ? AND data_hora < DATE_ADD(?, INTERVAL 1 DAY)
@@ -114,4 +119,4 @@ async function update(id, professionalId, changes) {
   }
 }
 
-module.exports = { buildAppointmentQuery, getByDateRange, getAvailableTimesByDate, create, cancel, update };
+module.exports = { buildAppointmentQuery, getByDateRange, getPossibleTimes, getAvailableTimesByDate, create, cancel, update };

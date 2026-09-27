@@ -8,12 +8,14 @@ const {
   getAgendamentos,
   createAgendamento,
   getHorariosDisponiveis,
+  getHorariosDaAgenda,
   cancelAgendamento,
   updateAgendamento,
 } = require("../controllers/agendamentoController.js");
 
 router.get("/", validate(schemas.appointmentQuery, "query"), getAgendamentos);
 router.get("/horarios-disponiveis", validate(schemas.availableTimesQuery, "query"), getHorariosDisponiveis);
+router.get("/horarios-da-agenda", getHorariosDaAgenda);
 router.post("/", validate(schemas.appointment), createAgendamento);
 router.patch("/:id", validate(schemas.idParams, "params"), validate(schemas.appointmentUpdate), updateAgendamento);
 router.delete("/:id", validate(schemas.idParams, "params"), cancelAgendamento);

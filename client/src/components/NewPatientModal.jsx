@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { Check, UserRound, X } from "lucide-react";
 import api from "../services/api";
 import { useConvenios } from "../hooks/useConvenios";
 import { formatPhone, onlyDigits } from "../utils/phone";
+import { PrettySelect } from "./ui/select";
 
 const EMPTY = {
   nome_completo: "",
@@ -31,20 +33,6 @@ function Field({ label, error, hint, children }) {
   );
 }
 
-function Chevron() {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 24 24"
-      className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path d="m6 9 6 6 6-6" fill="none" stroke="#66736c" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
-
 export function NewPatientModal({ open, onClose, onCreated }) {
   const queryClient = useQueryClient();
   const { data: convenios = [] } = useConvenios();
@@ -52,7 +40,7 @@ export function NewPatientModal({ open, onClose, onCreated }) {
   const [errors, setErrors] = useState({});
   const [formError, setFormError] = useState("");
   const [saving, setSaving] = useState(false);
-  const [created, setCreated] = useState("");
+  const [created, setCreated] = useState(null);
 
   useEffect(() => {
     if (open) {
@@ -60,7 +48,7 @@ export function NewPatientModal({ open, onClose, onCreated }) {
       setErrors({});
       setFormError("");
       setSaving(false);
-      setCreated("");
+      setCreated(null);
     }
   }, [open]);
 
@@ -98,7 +86,7 @@ export function NewPatientModal({ open, onClose, onCreated }) {
 
     setSaving(true);
     try {
-      await api.post("/pacientes", {
+      const response = await api.post("/pacientes", {
         nome_completo: nome,
         celular: digits,
         convenio_id: form.convenio_id ? Number(form.convenio_id) : null,
@@ -107,8 +95,9 @@ export function NewPatientModal({ open, onClose, onCreated }) {
         profissao: form.profissao.trim() || null,
       });
       await queryClient.invalidateQueries({ queryKey: ["pacientes"] });
-      setCreated(nome);
-      onCreated?.(nome);
+      const patient = { id: response.data?.id, nome_completo: nome };
+      setCreated(patient);
+      onCreated?.(patient);
     } catch (err) {
       setFormError(err.userMessage || "Não foi possível cadastrar o paciente. Tente novamente.");
     } finally {
@@ -123,47 +112,47 @@ export function NewPatientModal({ open, onClose, onCreated }) {
       role="presentation"
     >
       <div
-        className="flex max-h-[90vh] w-full max-w-[620px] flex-col overflow-auto rounded-[20px] border border-solid border-border bg-surface p-[22px]"
+        className="flex max-h-[90vh] w-full max-w-[640px] flex-col overflow-auto rounded-[20px] border border-solid border-border bg-surface p-[22px] sm:p-[26px]"
         onClick={(event) => event.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label="Novo paciente"
+        aria-labelledby="new-patient-title"
       >
         <div className="flex items-start justify-between gap-4">
-          <div className="flex flex-col gap-[2px]">
-            <h3 className="font-display text-[24px] font-semibold leading-[30px] text-ink">Novo paciente</h3>
-            <span className="text-xs leading-[18px] text-muted">
-              {created ? "Cadastro concluído" : "Preencha os dados do paciente"}
+          <div className="flex items-center gap-3">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-[13px] bg-primary-soft text-primary">
+              <UserRound size={20} aria-hidden="true" />
             </span>
+            <div className="flex flex-col gap-[2px]">
+              <h3 id="new-patient-title" className="font-display text-[24px] font-semibold leading-[30px] text-ink">Novo paciente</h3>
+              <span className="text-xs leading-[18px] text-muted">
+                {created ? "Cadastro concluído" : "Os dados essenciais para iniciar o acompanhamento"}
+              </span>
+            </div>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label="Fechar"
-            className="cursor-pointer rounded-full px-3 py-1 text-sm font-bold text-muted hover:bg-canvas"
+            className="grid h-10 w-10 shrink-0 cursor-pointer place-items-center rounded-[12px] text-muted transition-colors hover:bg-canvas hover:text-ink focus-visible:outline focus-visible:outline-3 focus-visible:outline-primary"
           >
-            Fechar ✕
+            <X size={19} aria-hidden="true" />
           </button>
         </div>
 
         {created ? (
           <div className="flex flex-col items-center gap-2 py-8 text-center">
             <span className="flex h-[56px] w-[56px] items-center justify-center rounded-full bg-success-soft">
-              <svg width="26" height="26" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="#2f6f68" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+              <Check size={27} strokeWidth={2.3} className="text-primary" aria-hidden="true" />
             </span>
             <p className="font-display text-[22px] font-semibold leading-[28px] text-ink">Paciente cadastrado!</p>
             <p className="text-sm leading-[20px] text-muted">
-              <strong className="text-ink">{created}</strong> já está na sua lista de pacientes.
+              <strong className="text-ink">{created.nome_completo}</strong> já está na sua lista de pacientes.
             </p>
-            <button
-              type="button"
-              onClick={onClose}
-              className="mt-3 inline-flex h-[46px] cursor-pointer items-center justify-center rounded-full bg-primary px-[24px] text-sm font-bold text-surface transition-colors hover:bg-[#245a54]"
-            >
-              Concluir
-            </button>
+            <div className="mt-3 flex flex-wrap justify-center gap-2">
+              <button type="button" onClick={() => { setCreated(null); setForm(EMPTY); }} className="inline-flex h-[44px] cursor-pointer items-center justify-center rounded-full border border-border bg-surface px-4 text-sm font-semibold text-ink transition-all duration-150 hover:-translate-y-px hover:border-primary/40 hover:bg-canvas hover:shadow-sm active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">Cadastrar outro</button>
+              <button type="button" onClick={onClose} className="inline-flex h-[44px] cursor-pointer items-center justify-center rounded-full bg-primary px-5 text-sm font-bold text-surface shadow-[0_1px_0_rgba(31,42,36,0.08)] transition-all duration-150 hover:-translate-y-px hover:bg-[#245a54] hover:shadow-md active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">Concluir</button>
+            </div>
           </div>
         ) : (
           <form className="mt-[18px] flex flex-col gap-[14px]" onSubmit={handleSubmit}>
@@ -204,32 +193,25 @@ export function NewPatientModal({ open, onClose, onCreated }) {
 
             <div className="grid gap-[14px] sm:grid-cols-2">
               <Field label="Convênio" hint="Deixe em particular se não houver">
-                <span className="relative flex">
-                  <select
-                    name="convenio_id"
-                    value={form.convenio_id}
-                    onChange={(event) => setField("convenio_id", event.target.value)}
-                    className={`${inputClass} cursor-pointer appearance-none pr-10`}
-                  >
-                    <option value="">Particular (sem convênio)</option>
-                    {convenios.map((convenio) => (
-                      <option key={convenio.id} value={convenio.id}>
-                        {convenio.nome_convenio}
-                      </option>
-                    ))}
-                  </select>
-                  <Chevron />
-                </span>
+                <PrettySelect
+                  name="convenio_id"
+                  ariaLabel="Convênio"
+                  value={form.convenio_id}
+                  onChange={(next) => setField("convenio_id", next)}
+                  placeholder="Particular (sem convênio)"
+                  options={convenios.map((convenio) => ({ value: String(convenio.id), label: convenio.nome_convenio }))}
+                />
               </Field>
               <Field label="Número da carteirinha">
                 <input
                   name="numero_carteirinha"
                   value={form.numero_carteirinha}
                   onChange={(event) => setField("numero_carteirinha", event.target.value.replace(/\D/g, ""))}
-                  placeholder="Somente números"
+                  placeholder={form.convenio_id ? "Somente números" : "Selecione um convênio"}
                   inputMode="numeric"
                   maxLength={80}
-                  className={inputClass}
+                  disabled={!form.convenio_id}
+                  className={`${inputClass} disabled:cursor-not-allowed disabled:opacity-55`}
                 />
               </Field>
             </div>
@@ -253,14 +235,14 @@ export function NewPatientModal({ open, onClose, onCreated }) {
               <button
                 type="button"
                 onClick={onClose}
-                className="inline-flex h-[46px] cursor-pointer items-center justify-center rounded-full border border-solid border-border bg-surface px-[18px] text-sm font-semibold leading-[18px] text-ink hover:bg-canvas"
+                className="inline-flex h-[46px] cursor-pointer items-center justify-center rounded-full border border-solid border-border bg-surface px-[18px] text-sm font-semibold leading-[18px] text-ink transition-all duration-150 hover:-translate-y-px hover:border-primary/40 hover:bg-canvas hover:shadow-sm active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={saving}
-                className="inline-flex h-[46px] cursor-pointer items-center justify-center rounded-full bg-primary px-[18px] text-sm font-bold leading-[18px] text-surface transition-colors hover:bg-[#245a54] disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex h-[46px] cursor-pointer items-center justify-center rounded-full bg-primary px-[18px] text-sm font-bold leading-[18px] text-surface shadow-[0_1px_0_rgba(31,42,36,0.08)] transition-all duration-150 hover:-translate-y-px hover:bg-[#245a54] hover:shadow-md active:translate-y-0 active:scale-[0.98] motion-reduce:transform-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:translate-y-0 disabled:hover:shadow-none"
               >
                 {saving ? "Salvando..." : "Salvar paciente"}
               </button>

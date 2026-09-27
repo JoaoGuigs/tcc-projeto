@@ -14,3 +14,11 @@ export function useCreateConvenio() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: convenioKeys.all }),
   });
 }
+
+export function useDeleteConvenio() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id) => api.delete(`/convenios/${id}`),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: convenioKeys.all }),
+  });
+}

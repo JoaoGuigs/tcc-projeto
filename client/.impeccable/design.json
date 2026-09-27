@@ -1,0 +1,134 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-16T22:49:25.4765246Z",
+  "title": "Design System: FisioCare — Mapa de Movimento",
+  "extensions": {
+    "colorMeta": {
+      "care-green": {
+        "role": "primary",
+        "displayName": "Verde do Cuidado",
+        "canonical": "#276B61",
+        "tonalRamp": ["#20312B", "#276B61", "#3F887D", "#83B5AA", "#CDE2DC", "#D4E8E3", "#DCEBE6", "#EEF6F2"]
+      },
+      "canvas-cream": {
+        "role": "neutral",
+        "displayName": "Creme de Trabalho",
+        "canonical": "#F6F2EA",
+        "tonalRamp": ["#20312B", "#52635B", "#AAA79F", "#D8D2C7", "#EDE7DB", "#F1EEE7", "#F6F2EA", "#FFFFFF"]
+      },
+      "attention": {
+        "role": "secondary",
+        "displayName": "Âmbar de Atenção",
+        "canonical": "#7B4E0B"
+      },
+      "milestone": {
+        "role": "tertiary",
+        "displayName": "Violeta de Marco",
+        "canonical": "#5A476D"
+      },
+      "danger": {
+        "role": "tertiary",
+        "displayName": "Rosa de Falha",
+        "canonical": "#75413D"
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Desktop page titles and strongest orientation cues." },
+      "headline": { "displayName": "Headline", "purpose": "Major section headings and workflow labels." },
+      "title": { "displayName": "Title", "purpose": "Card titles, patient names, times, and immediate actions." },
+      "body": { "displayName": "Body", "purpose": "Explanatory copy and supporting clinical context." },
+      "field-value": { "displayName": "Field Value", "purpose": "Entered data and compact values inside controls." },
+      "action": { "displayName": "Action", "purpose": "Button labels and direct textual actions." },
+      "label": { "displayName": "Label", "purpose": "Statuses, compact actions, navigation metadata, and field labels." }
+    },
+    "shadows": [],
+    "motion": []
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Compact primary action for the next useful step.",
+      "html": "<button class=\"ds-btn-primary\">Marcar consulta</button>",
+      "css": ".ds-btn-primary { height: 44px; padding: 0 20px; border: 0; border-radius: 11px; background: #276B61; color: #FFFFFF; font-family: 'Source Sans 3', Arial, sans-serif; font-size: 14px; font-weight: 700; } .ds-btn-primary:hover { outline: 1px solid #20312B; } .ds-btn-primary:focus-visible { outline: 3px solid #276B61; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Paper button for secondary actions beside a primary decision.",
+      "html": "<button class=\"ds-btn-secondary\">Abrir perfil</button>",
+      "css": ".ds-btn-secondary { height: 44px; padding: 0 20px; border: 1px solid #D8D2C7; border-radius: 11px; background: #FFFFFF; color: #20312B; font-family: 'Source Sans 3', Arial, sans-serif; font-size: 14px; font-weight: 700; } .ds-btn-secondary:hover { border-color: #276B61; color: #276B61; } .ds-btn-secondary:focus-visible { outline: 3px solid #276B61; }"
+    },
+    {
+      "name": "Clinical Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Warm paper field for professional and clinical data.",
+      "html": "<label class=\"ds-field-label\">E-mail<input class=\"ds-field\" value=\"ana@fisiocare.com.br\"></label>",
+      "css": ".ds-field-label { display: grid; gap: 8px; color: #52635B; font-family: 'Source Sans 3', Arial, sans-serif; font-size: 13px; font-weight: 700; } .ds-field { height: 48px; padding: 0 14px; border: 1px solid #D8D2C7; border-radius: 10px; background: #FBFAF7; color: #20312B; font: 600 14px 'Source Sans 3', Arial, sans-serif; } .ds-field:hover { border-color: #276B61; } .ds-field:focus-visible { border-color: #276B61; outline: 3px solid #276B61; }"
+    },
+    {
+      "name": "Confirmed Status",
+      "kind": "chip",
+      "refersTo": "status-confirmed",
+      "description": "Textual status capsule for a confirmed appointment or completed safe state.",
+      "html": "<span class=\"ds-status-confirmed\">Confirmada</span>",
+      "css": ".ds-status-confirmed { display: inline-flex; align-items: center; justify-content: center; min-width: 112px; height: 28px; padding: 0 14px; border-radius: 14px; background: #DCEBE6; color: #276B61; font-family: 'Source Sans 3', Arial, sans-serif; font-size: 13px; font-weight: 700; }"
+    },
+    {
+      "name": "Clinical Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Flat paper plane for immediate clinical context and the next action.",
+      "html": "<section class=\"ds-card\"><h3>Agora</h3><strong>Maria Oliveira</strong><p>Atendimento de 08:00 aguardando registro.</p></section>",
+      "css": ".ds-card { width: 360px; padding: 24px; border: 0; border-radius: 16px; background: #FFFFFF; color: #20312B; font-family: 'Source Sans 3', Arial, sans-serif; } .ds-card h3 { margin: 0 0 20px; font-size: 22px; font-weight: 700; } .ds-card strong { display: block; color: #276B61; font-size: 26px; } .ds-card p { margin: 8px 0 0; color: #52635B; font-size: 14px; } .ds-card:hover { outline: 1px solid #D8D2C7; } .ds-card:focus-within { outline: 3px solid #276B61; }"
+    },
+    {
+      "name": "Active Sidebar Item",
+      "kind": "nav",
+      "description": "Icon-and-label active destination in the warm-cream desktop sidebar.",
+      "html": "<a class=\"ds-sidebar-item is-active\" href=\"#\"><span aria-hidden=\"true\" class=\"ds-sidebar-marker\"></span><svg aria-hidden=\"true\" viewBox=\"0 0 24 24\"><path d=\"M6 3v3m12-3v3M4 9h16M5 5h14v15H4V6z\"/></svg><span>Agenda</span></a>",
+      "css": ".ds-sidebar-item { position: relative; display: inline-flex; align-items: center; gap: 12px; width: 212px; height: 48px; padding: 0 14px; border-radius: 12px; color: #52635B; text-decoration: none; font-family: 'Source Sans 3', Arial, sans-serif; font-size: 15px; font-weight: 600; } .ds-sidebar-item svg { width: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; } .ds-sidebar-item.is-active { border: 1px solid #D8D2C7; background: #FFFFFF; color: #276B61; font-weight: 700; } .ds-sidebar-marker { position: absolute; left: 0; width: 4px; height: 30px; border-radius: 2px; background: #276B61; } .ds-sidebar-item:focus-visible { outline: 3px solid #276B61; }"
+    },
+    {
+      "name": "Care Path Step",
+      "kind": "custom",
+      "description": "Signature chronological step combining a semantic node with adjacent patient context.",
+      "html": "<div class=\"ds-path-step\"><span aria-hidden=\"true\" class=\"ds-path-node\"></span><div class=\"ds-path-copy\"><strong>10:00 · Horário disponível</strong><span>2 pacientes aguardam encaixe</span></div></div>",
+      "css": ".ds-path-step { display: flex; align-items: center; gap: 28px; color: #20312B; font-family: 'Source Sans 3', Arial, sans-serif; } .ds-path-node { width: 16px; height: 16px; border: 3px solid #276B61; border-radius: 50%; background: #FFFFFF; } .ds-path-copy { min-width: 300px; padding: 20px 24px; border: 1px solid #276B61; border-radius: 13px; background: #EEF6F2; } .ds-path-copy strong { display: block; font-size: 16px; } .ds-path-copy span { display: block; margin-top: 8px; color: #52635B; font-size: 13px; } .ds-path-step:hover .ds-path-copy { color: #276B61; } .ds-path-step:focus-within .ds-path-copy { outline: 3px solid #276B61; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Mapa de Movimento",
+    "overview": "O sistema visual trata o dia da clínica como um percurso conectado de cuidado. O próximo atendimento, a decisão pendente e sua consequência aparecem em planos claros, tabelas e sequências cronológicas, sem transformar a rotina da fisioterapeuta em um painel empresarial genérico.\n\nA atmosfera combina um espaço creme quente com planos brancos, tipografia direta e uma rota verde usada como estrutura de informação. A expressão permanece calma e compacta: curvas e nós só aparecem quando comunicam tempo, progresso, seleção ou relação clínica.",
+    "keyCharacteristics": [
+      "Warm cream workspace with calm white content planes.",
+      "One green care path connecting current state, progress, and next action.",
+      "Compact rectangular controls and textual status labels.",
+      "Flat tonal layering without gradients or decorative shadows.",
+      "Responsive continuity from an icon-and-label desktop sidebar to an icon-and-label mobile bottom navigation."
+    ],
+    "rules": [
+      { "name": "The Green Is Direction Rule", "body": "Reserve green for primary actions, current navigation, progress, selection, and confirmed states.", "section": "colors" },
+      { "name": "The Status Has a Voice Rule", "body": "Every status includes text or a meaningful symbol in addition to color.", "section": "colors" },
+      { "name": "The One Family Rule", "body": "Use Source Sans 3 throughout the product and create hierarchy with the established size and weight range.", "section": "typography" },
+      { "name": "The Tonal Plane Rule", "body": "Establish hierarchy with background tone and borders; do not add ornamental elevation.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep the next useful action visible beside its clinical context.",
+      "Do reserve the care path for chronology, selection, progress, or relationship.",
+      "Do pair every semantic color with text or a meaningful symbol.",
+      "Do preserve the warm cream workspace, white planes, and restrained green emphasis.",
+      "Do collapse the desktop sidebar into icon-and-label bottom navigation on narrow mobile surfaces."
+    ],
+    "donts": [
+      "Don't turn the interface into a matrix of equal, disconnected dashboard cards.",
+      "Don't use route lines or nodes as decoration without encoded meaning.",
+      "Don't add shadows or gradients to create hierarchy that tone and borders already provide.",
+      "Don't communicate appointment, message, or clinical status through color alone.",
+      "Don't use ambiguous icon-only navigation or mix unrelated functions without group labels."
+    ]
+  }
+}

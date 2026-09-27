@@ -142,7 +142,15 @@ function CadastroUsuarioPage() {
                         type="submit"
                         fullWidth
                         variant="contained"
-                        sx={{ mt: 3, mb: 2 }}
+                        sx={{
+                            mt: 3,
+                            mb: 2,
+                            borderRadius: "12px",
+                            backgroundColor: "#2f6f68",
+                            transition: "all .15s",
+                            "&:hover": { backgroundColor: "#245a54", transform: "translateY(-1px)", boxShadow: "0 6px 16px rgba(47,111,104,.25)" },
+                            "&:active": { transform: "translateY(0) scale(.98)" },
+                        }}
                     >
                         Cadastrar
                     </Button>

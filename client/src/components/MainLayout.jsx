@@ -8,7 +8,7 @@ export function MainLayout() {
   const { pathname } = useLocation();
   // Páginas com cabeçalho próprio no padrão do Paper — o Header genérico
   // não pode aparecer nelas para não duplicar.
-  const OWN_HEADER_PATHS = ["/home", "/agendar", "/pacientes", "/whatsapp", "/financeiro"];
+  const OWN_HEADER_PATHS = ["/home", "/agendar", "/pacientes", "/atendimentos/novo", "/whatsapp", "/financeiro", "/relatorios", "/convenios", "/configuracoes"];
   const hasOwnHeader = OWN_HEADER_PATHS.includes(pathname);
 
   return (

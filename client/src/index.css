@@ -30,3 +30,67 @@
 
 * { box-sizing: border-box; }
 body { margin: 0; min-width: 320px; background: #f7f5f1; color: #1f2a24; font-family: "Source Sans 3", system-ui, sans-serif; }
+
+/* Hover base simples e bonitinho para todo botão/link clicável (ui-ux-pro-max: press-feedback + state-clarity).
+   Componentes com classes próprias (Button, etc.) mantêm seu hover; isto é só o fallback. */
+button:not(:disabled),
+[role="button"],
+a.btn {
+  cursor: pointer;
+}
+button:not(:disabled):focus-visible,
+a:focus-visible {
+  outline: 2px solid #2f6f68;
+  outline-offset: 2px;
+}
+
+/* Date/Month inputs: ícone do picker com hover suave */
+input[type="date"],
+input[type="month"] {
+  color-scheme: light;
+}
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="month"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.5;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+input[type="date"]:hover::-webkit-calendar-picker-indicator,
+input[type="month"]:hover::-webkit-calendar-picker-indicator {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+/* Select nativo: opções com leitura confortável */
+select option {
+  background: #ffffff;
+  color: #1f2a24;
+}
+
+/* Acessibilidade: respeita quem prefere menos movimento */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+@media print {
+  @page { margin: 16mm; }
+
+  body:has([data-report-print]) * { visibility: hidden !important; }
+  body:has([data-report-print]) [data-report-print],
+  body:has([data-report-print]) [data-report-print] * { visibility: visible !important; }
+
+  body:has([data-report-print]) [data-report-print] {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    border: 0;
+    box-shadow: none;
+  }
+
+  body:has([data-report-print]) [data-report-print] button { display: none !important; }
+}
